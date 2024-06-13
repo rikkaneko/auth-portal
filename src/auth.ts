@@ -5,7 +5,13 @@ import google from './sso/google';
 const route = Router();
 
 route.get('/', (req, res) => {
-  res.redirect('/login/microsoft');
+  res.send('Please select your SSO provider: microsoft, google');
+});
+
+route.get('/logout', (req, res) => {
+  req.session.destroy(() => {
+    res.send('Logged out');
+  });
 });
 
 route.use('/microsoft', microsoft);

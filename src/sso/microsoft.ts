@@ -11,33 +11,13 @@ import {
 // Use https://learn.microsoft.com/en-us/entra/identity-platform/id-token-claims-reference to verify user identity
 const msal = new ConfidentialClientApplication({
   auth: {
-    clientId: config.MS_CLIENT_ID, // Application (client) ID
-    clientSecret: config.MS_CLIENT_SECRET, // Client secret
-    authority: config.MS_DIRECTORY_URL, // Full directory URL, in the form of https://login.microsoftonline.com/<tenant>
+    clientId: config.MS_AUTH_CLIENT_ID, // Application (client) ID
+    clientSecret: config.MS_AUTH_CLIENT_SECRET, // Client secret
+    authority: config.MS_AUTH_DIRECTORY_URL, // Full directory URL, in the form of https://login.microsoftonline.com/<tenant>
   },
 });
 
 const route = Router();
-
-// Add new fields to session data
-declare module 'express-session' {
-  interface SessionData {
-    pkce?: {
-      codes?: string;
-      verifier?: string;
-      challenge?: string;
-      challenge_method?: string;
-    };
-    user?: {
-      logged?: boolean;
-      username?: string;
-      display_name?: string;
-      uuid?: string;
-      id_token?: string;
-      access_token?: string;
-    };
-  }
-}
 
 route.get('/', async (req, res) => {
   const crypt = new CryptoProvider();
@@ -63,7 +43,7 @@ route.get('/', async (req, res) => {
     const login_url = await msal.getAuthCodeUrl(auth_code_url_params);
     res.redirect(login_url);
   } catch (err) {
-    console.log(JSON.stringify(err));
+    console.log(err);
   }
 });
 
@@ -82,11 +62,9 @@ route.get('/callback', async (req, res) => {
     const claims = auth_reply.account?.idTokenClaims;
     const user = {
       logged: true,
-      username: claims?.preferred_username,
+      email: claims!.preferred_username!,
       display_name: claims?.name,
-      uuid: claims?.oid,
-      id_token: auth_reply.idToken,
-      access_token: auth_reply.accessToken,
+      uuid: claims!.oid!,
     };
     console.log('\nResponse: \n', user);
     req.session.user = user;

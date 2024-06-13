@@ -1,13 +1,15 @@
 import express from 'express';
-import './config';
-import login from './login';
+import config from './config';
+import auth from './auth';
 import session from 'express-session';
+import crypto from 'crypto';
 
 const app = express().disable('x-powered-by');
 
 // Add new fields to session data
 declare module 'express-session' {
   interface SessionData {
+    state?: string;
     pkce?: {
       codes?: string;
       verifier?: string;
@@ -15,53 +17,53 @@ declare module 'express-session' {
       challenge_method?: string;
     };
     user?: {
-      logged?: boolean;
-      username?: string;
+      logged: boolean;
+      email: string;
       display_name?: string;
-      uuid?: string;
-      id_token?: string;
-      access_token?: string;
+      uuid: string;
     };
   }
 }
 
 app.use(
   session({
-    secret: process.env.SESSION_SECRET_KEY!,
+    secret: config.SESSION_SECRET_KEY ?? crypto.randomBytes(32).toString('hex'),
+    name: 'sessionId',
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
     cookie: {
       httpOnly: true,
+      maxAge: 14400000, // 4 hours
     },
   })
 );
 
 app.get('/', (req, res) => {
   if (!req.session.user?.logged) {
-    res.redirect('/login');
+    res.redirect('/auth');
     return;
   }
   res.redirect('/me');
 });
 
-app.use('/login', login);
+app.use('/auth', auth);
 
 app.get('/me', (req, res) => {
   if (!req.session.user?.logged) {
-    res.redirect('/login');
+    res.redirect('/auth');
     return;
   }
   const user = req.session.user;
   res.json({
     status: 'ok',
     user: {
-      username: user.username,
+      username: user.email,
       display_name: user.display_name,
       uuid: user.uuid,
     },
   });
 });
 
-app.listen(8088, () => {
+app.listen(config.APP_PORT, () => {
   console.log(`Server started at http://localhost:8088`);
 });
