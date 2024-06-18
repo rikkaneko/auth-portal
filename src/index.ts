@@ -4,8 +4,8 @@ import auth from './auth';
 import client from './dbclient';
 
 import session from 'express-session';
+import cookie_parser from 'cookie-parser';
 import mongostore from 'connect-mongo';
-import { MongoClient } from 'mongodb';
 
 const app = express().disable('x-powered-by');
 
@@ -25,7 +25,6 @@ declare module 'express-session' {
       display_name?: string;
       uuid: string;
     };
-    id_token?: string;
   }
 }
 
@@ -47,6 +46,8 @@ app.use(
   })
 );
 
+app.use(cookie_parser());
+
 app.get('/', (req, res) => {
   if (!req.session.user?.logged) {
     res.redirect('/auth');
@@ -56,22 +57,6 @@ app.get('/', (req, res) => {
 });
 
 app.use('/auth', auth);
-
-app.get('/me', (req, res) => {
-  if (!req.session.user?.logged) {
-    res.redirect('/auth');
-    return;
-  }
-  const user = req.session.user;
-  res.json({
-    status: 'ok',
-    user: {
-      username: user.email,
-      display_name: user.display_name,
-      uuid: user.uuid,
-    },
-  });
-});
 
 app.listen(config.APP_PORT, () => {
   console.log(`Server started at http://localhost:8088`);
