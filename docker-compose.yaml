@@ -1,0 +1,39 @@
+version: '3.1'
+
+services:
+  # auth_portal_api:
+  #   container_name: auth_portal_api
+  #   build: .
+  #   restart: always
+  #   ports:
+  #     - '127.0.0.1:8081:8081'
+  #   environment:
+  #   depends_on:
+  #     - mongo
+
+  mongo:
+    image: mongo
+    restart: always
+    ports:
+      - '127.0.0.1:27017:27017'
+    volumes:
+      - db:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: admin
+      MONGO_INITDB_DATABASE: auth-portal
+
+  mongo-express:
+    image: mongo-express
+    restart: always
+    ports:
+      - 127.0.0.1:8081:8081
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: admin
+      ME_CONFIG_MONGODB_URL: mongodb://root:admin@mongo:27017
+      ME_CONFIG_BASICAUTH: false
+
+
+volumes:
+  db:

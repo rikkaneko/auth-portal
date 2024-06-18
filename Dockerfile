@@ -28,4 +28,4 @@ COPY --from=builder --chown=nextjs:nodejs /app/dist ./dist
 COPY --from=builder --chown=nextjs:nodejs /app/.env ./.env
 
 USER nextjs
-CMD npm start
+CMD npm start:production

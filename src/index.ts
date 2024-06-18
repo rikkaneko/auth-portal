@@ -1,8 +1,11 @@
 import express from 'express';
 import config from './config';
 import auth from './auth';
+import client from './dbclient';
+
 import session from 'express-session';
-import crypto from 'crypto';
+import mongostore from 'connect-mongo';
+import { MongoClient } from 'mongodb';
 
 const app = express().disable('x-powered-by');
 
@@ -22,12 +25,13 @@ declare module 'express-session' {
       display_name?: string;
       uuid: string;
     };
+    id_token?: string;
   }
 }
 
 app.use(
   session({
-    secret: config.SESSION_SECRET_KEY ?? crypto.randomBytes(32).toString('hex'),
+    secret: config.SESSION_SECRET_KEY,
     name: 'sessionId',
     resave: false,
     saveUninitialized: false,
@@ -35,6 +39,11 @@ app.use(
       httpOnly: true,
       maxAge: 14400000, // 4 hours
     },
+    store: mongostore.create({
+      client: client.connection.getClient() as any,
+      dbName: 'auth-portal',
+      collectionName: 'session',
+    }),
   })
 );
 
