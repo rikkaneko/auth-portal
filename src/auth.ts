@@ -56,7 +56,7 @@ route.get('/token', async (req, res) => {
   // Mocked result
   // const user = {
   //   id: 'testuser',
-  //   role: 'user',
+  //   role: ['user'],
   //   username: 'testuser',
   //   linked_email: 'rikkaneko23@gmail.com',
   //   fullname: 'Test User',

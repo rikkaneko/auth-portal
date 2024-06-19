@@ -1,10 +1,8 @@
 import mongoose from 'mongoose';
-import dbclient from '../dbclient';
-import config from '../config';
 
 export interface IUser {
   id: string;
-  role: string;
+  role: string[];
   username: string;
   linked_email: string;
   fullname: string;
@@ -19,7 +17,7 @@ export interface IUser {
 const UserSchema = new mongoose.Schema<IUser>(
   {
     id: String,
-    role: String,
+    role: [String],
     username: String,
     linked_email: String,
     fullname: String,
