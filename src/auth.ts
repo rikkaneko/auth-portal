@@ -13,6 +13,7 @@ route.get('/', (req, res) => {
 });
 
 route.get('/logout', (req, res) => {
+  res.clearCookie('id_token');
   req.session.destroy(() => {
     res.send('Logged out');
   });
@@ -38,7 +39,7 @@ route.get('/me', (req, res) => {
     });
     res.json({
       status: 'ok',
-      id_token: decoded,
+      user: decoded.payload,
     });
   } catch (err) {
     console.error(err);
@@ -85,10 +86,12 @@ route.get('/token', async (req, res) => {
     maxAge: 14400000,
   });
   res.json({
-    id: user.id,
-    role: user.role,
-    username: user.username,
-    email: user.linked_email,
+    user: {
+      id: user.id,
+      role: user.role,
+      username: user.username,
+      email: user.linked_email,
+    },
     id_token: signed,
   });
 });

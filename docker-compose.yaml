@@ -1,15 +1,16 @@
 version: '3.1'
 
 services:
-  # auth_portal_api:
-  #   container_name: auth_portal_api
-  #   build: .
-  #   restart: always
-  #   ports:
-  #     - '127.0.0.1:8081:8081'
-  #   environment:
-  #   depends_on:
-  #     - mongo
+  auth_portal_api:
+    container_name: auth_portal_api
+    build: .
+    restart: always
+    ports:
+      - '127.0.0.1:8088:8088'
+    environment:
+      - CONNECTION_STR=mongodb://root:admin@mongo:27017/auth-portal
+    depends_on:
+      - mongo
 
   mongo:
     image: mongo

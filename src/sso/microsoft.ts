@@ -68,10 +68,7 @@ route.get('/callback', async (req, res) => {
     };
     console.log('\nResponse: \n', user);
     req.session.user = user;
-    res.json({
-      status: 'ok',
-      user,
-    });
+    res.redirect('/auth/token');
   } catch (err) {
     console.log(err);
     res.status(500).json({
