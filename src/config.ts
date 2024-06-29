@@ -14,10 +14,10 @@ const config = {
   MS_AUTH_CLIENT_ID: process.env.MS_AUTH_CLIENT_ID!, // OAuth2 Client ID for Microsoft SSO
   MS_AUTH_CLIENT_SECRET: process.env.MS_AUTH_CLIENT_SECRET!, // OAuth2 Client Secret for Microsoft SSO
   MS_AUTH_DIRECTORY_URL: process.env.MS_AUTH_DIRECTORY_URL ?? 'https://login.microsoftonline.com/common', // Microsoft SSO Directory URL
-  MS_AUTH_LOGIN_CALLBACK: process.env.MS_AUTH_LOGIN_CALLBACK ?? `${APP_DOMAIN}/auth/microsoft/callback`, // Callback path for Microsoft SSO (Need to as same as the registered URL)
+  MS_AUTH_LOGIN_CALLBACK: process.env.MS_AUTH_LOGIN_CALLBACK ?? `https://${APP_DOMAIN}/auth/microsoft/callback`, // Callback path for Microsoft SSO (Need to as same as the registered URL)
   GOOGLE_AUTH_CLIENT_ID: process.env.GOOGLE_AUTH_CLIENT_ID!, // OAuth2 Client ID for Google SSO
   GOOGLE_AUTH_CLIENT_SECRET: process.env.GOOGLE_AUTH_CLIENT_SECRET!, // OAuth2 Client Secret for Google SSO
-  GOOGLE_AUTH_LOGIN_CALLBACK: process.env.GOOGLE_AUTH_LOGIN_CALLBACK ?? `${APP_DOMAIN}/auth/google/callback`, // Callback path for Google SSO (Need to as same as the registered URL)
+  GOOGLE_AUTH_LOGIN_CALLBACK: process.env.GOOGLE_AUTH_LOGIN_CALLBACK ?? `https://${APP_DOMAIN}/auth/google/callback`, // Callback path for Google SSO (Need to as same as the registered URL)
   CONNECTION_STR: process.env.CONNECTION_STR!, // Connection String to MongoDB Instance (Either self-hosted or MongoDB Atlas)
   /* JWT Signing Key
    * ES256 - ECDSA with the P-256 curve and the SHA-256 hash function
