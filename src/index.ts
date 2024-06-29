@@ -1,6 +1,8 @@
-import express from 'express';
+import express, { ErrorRequestHandler } from 'express';
+import 'express-async-errors';
 import config from './config';
 import auth from './auth';
+import user from './user';
 import client from './dbclient';
 
 import session from 'express-session';
@@ -9,34 +11,15 @@ import mongostore from 'connect-mongo';
 
 const app = express().disable('x-powered-by');
 
-// Add new fields to session data
-declare module 'express-session' {
-  interface SessionData {
-    state?: string;
-    pkce?: {
-      codes?: string;
-      verifier?: string;
-      challenge?: string;
-      challenge_method?: string;
-    };
-    user?: {
-      logged: boolean;
-      email: string;
-      display_name?: string;
-      uuid: string;
-    };
-  }
-}
-
 app.use(
   session({
     secret: config.SESSION_SECRET_KEY,
     name: 'sessionId',
     resave: false,
-    saveUninitialized: false,
+    saveUninitialized: true,
     cookie: {
       httpOnly: true,
-      maxAge: 14400000, // 4 hours
+      maxAge: 5 * 60 * 1000, // 5 min
     },
     store: mongostore.create({
       client: client.connection.getClient() as any,
@@ -53,10 +36,22 @@ app.get('/', (req, res) => {
     res.redirect('/auth');
     return;
   }
-  res.redirect('/me');
+  res.redirect('/auth/me');
 });
 
 app.use('/auth', auth);
+
+app.use('/user', user);
+
+// Fallback path
+app.use((req, res) => {
+  res.status(404).send('No such path');
+});
+
+app.use(((err, req, res) => {
+  console.error(err.stack);
+  res.status(500).send('500 Internal error');
+}) as ErrorRequestHandler);
 
 app.listen(config.APP_PORT, () => {
   console.log(`Server started at http://localhost:8088`);

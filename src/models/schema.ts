@@ -6,6 +6,7 @@ export interface IUser {
   username: string;
   linked_email: string;
   fullname: string;
+  groups: string[];
   created_by: Date;
   updated_by: Date;
   create_at: Date;
@@ -21,6 +22,7 @@ const UserSchema = new mongoose.Schema<IUser>(
     username: String,
     linked_email: String,
     fullname: String,
+    groups: [String],
     created_by: String,
     updated_by: String,
     status: {

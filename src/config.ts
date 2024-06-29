@@ -28,6 +28,7 @@ const config = {
    */
   JWT_SIGN_KEY: process.env.JWT_SIGN_KEY ?? './server.pem',
   JWT_VERIFY_KEY: process.env.JWT_VERIFY_KEY! ?? './server.pub',
+  JWT_SIGN_ISSUER: process.env.JWT_SIGN_ISSUER ?? 'auth-portal',
 };
 
 if (

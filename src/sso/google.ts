@@ -1,8 +1,9 @@
 import { Router } from 'express';
 import config from '../config';
-import { OAuth2Client$Userinfo } from '../types/googleapi';
+import { OAuth2Client$Userinfo } from '../types';
 import { OAuth2Client } from 'google-auth-library';
 import crypto from 'crypto';
+import { pre_login_handle } from '.';
 
 const oauth = new OAuth2Client({
   clientId: config.GOOGLE_AUTH_CLIENT_ID,
@@ -12,7 +13,7 @@ const oauth = new OAuth2Client({
 
 const route = Router();
 
-route.get('/', (req, res) => {
+route.get('/', pre_login_handle, (req, res) => {
   // Generate a secure random state value.
   const state = crypto.randomBytes(32).toString('hex');
   req.session.state = state;
@@ -22,7 +23,7 @@ route.get('/', (req, res) => {
     scope: ['email', 'profile', 'openid'],
     prompt: 'select_account',
     // Enable incremental authorization. Recommended as a best practice.
-    include_granted_scopes: true,
+    // include_granted_scopes: true,
     // Include the state parameter to reduce the risk of CSRF attacks.
     state,
   });
@@ -40,10 +41,7 @@ route.get('/callback', async (req, res) => {
     });
   } else if (q.state && q.state !== req.session.state) {
     console.log('State mismatch. Possible CSRF attack');
-    res.status(403).json({
-      status: 'failed',
-      message: 'CSRF state mismatch',
-    });
+    res.status(403).send('CSRF state mismatch');
   } else {
     try {
       // An identifier for the user
@@ -65,10 +63,7 @@ route.get('/callback', async (req, res) => {
       res.redirect('/auth/token');
     } catch (err) {
       console.error(err);
-      res.status(500).json({
-        status: 'failed',
-        message: 'Unable to grant access',
-      });
+      res.status(500).json('Unable to grant access');
     }
   }
 });
