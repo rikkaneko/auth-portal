@@ -41,7 +41,12 @@ route.get('/callback', async (req, res) => {
     });
   } else if (q.state && q.state !== req.session.state) {
     console.log('State mismatch. Possible CSRF attack');
-    res.status(403).send('CSRF state mismatch');
+    res.status(403).json({
+      error: {
+        code: 403,
+        message: 'CSRF state mismatch',
+      },
+    });
   } else {
     try {
       // An identifier for the user
@@ -63,7 +68,12 @@ route.get('/callback', async (req, res) => {
       res.redirect('/auth/token');
     } catch (err) {
       console.error(err);
-      res.status(500).json('Unable to grant access');
+      res.status(500).json({
+        error: {
+          code: 500,
+          mnessage: 'Unable to grant access',
+        },
+      });
     }
   }
 });

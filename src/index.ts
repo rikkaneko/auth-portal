@@ -45,12 +45,23 @@ app.use('/user', user);
 
 // Fallback path
 app.use((req, res) => {
-  res.status(404).send('No such path');
+  res.status(403).json({
+    error: {
+      code: 403,
+      message: 'Endpoint not found',
+    },
+  });
 });
 
 app.use(((err, req, res) => {
   console.error(err.stack);
-  res.status(500).send('500 Internal error');
+  res.status(500).json({
+    error: {
+      code: 500,
+      message: 'Internal error',
+    },
+  });
+  console.error(err);
 }) as ErrorRequestHandler);
 
 app.listen(config.APP_PORT, () => {

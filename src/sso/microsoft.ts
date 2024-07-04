@@ -73,8 +73,10 @@ route.get('/callback', async (req, res) => {
   } catch (err) {
     console.log(err);
     res.status(500).json({
-      status: 'failed',
-      error: err,
+      error: {
+        code: 500,
+        err,
+      },
     });
   }
 });

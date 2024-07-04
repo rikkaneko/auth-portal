@@ -16,7 +16,7 @@ route.get('/', (_, res) => {
 route.get('/logout', (req, res) => {
   res.clearCookie('id_token');
   req.session.destroy(() => {
-    res.send('Logged out');
+    res.json({});
   });
 });
 
@@ -52,29 +52,35 @@ route.get('/token_info', (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(403).send('Invalid token');
+    res.status(403).json({
+      error: {
+        code: 403,
+        message: 'Invalid token',
+      },
+    });
   }
 });
 
 route.get('/token', async (req, res) => {
   if (!req.session.user?.logged) {
-    res.status(403).end('403 Unauthorized');
+    res.status(403).json({
+      error: {
+        code: 403,
+        message: 'Unauthorized',
+      },
+    });
     return;
   }
   res.clearCookie('id_token');
   // Verify user login information
   const user = await User.findOne({ linked_email: req.session.user.email });
-  // Mocked result
-  // const user = {
-  //   id: 'testuser',
-  //   role: ['user'],
-  //   username: 'testuser',
-  //   linked_email: 'rikkaneko23@gmail.com',
-  //   fullname: 'Test User',
-  //   status: 'active',
-  // };
   if (user === null) {
-    res.status(403).send('Logged user is not registed to the system');
+    res.status(403).json({
+      error: {
+        code: 403,
+        message: 'Logged user is not registed to the system',
+      },
+    });
     return;
   }
   // Generate and signed id token jwt
@@ -83,6 +89,7 @@ route.get('/token', async (req, res) => {
     role: user.role,
     username: user.username,
     email: user.linked_email,
+    organization: user.organization,
   };
   const signed = jwt.sign(user_info, config.JWT_SIGN_KEY, {
     algorithm: 'ES256',
@@ -110,7 +117,12 @@ route.get('/token', async (req, res) => {
 
 // Fallback path
 route.use((req, res) => {
-  res.status(403).send('403 Unauthorized');
+  res.status(403).json({
+    error: {
+      code: 403,
+      message: 'Unauthorized',
+    },
+  });
 });
 
 export default route;

@@ -1,34 +1,54 @@
-import mongoose from 'mongoose';
+import { Schema } from 'mongoose';
+import db from '../dbclient';
 
 export interface IUser {
   id: string;
   role: string[];
   username: string;
   linked_email: string;
-  fullname: string;
+  fullname?: string;
   groups: string[];
-  created_by: Date;
-  updated_by: Date;
+  created_by?: string;
+  updated_by?: string;
   create_at: Date;
   updated_at: Date;
   status: 'active' | 'disabled' | 'locked';
-  organization_id: string;
+  organization: string;
 }
 
-const UserSchema = new mongoose.Schema<IUser>(
+const UserSchema = new Schema<IUser>(
   {
-    id: String,
-    role: [String],
-    username: String,
-    linked_email: String,
+    id: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+    role: {
+      type: [String],
+      required: true,
+    },
+    username: {
+      type: String,
+      required: true,
+    },
+    linked_email: {
+      type: String,
+      required: true,
+      unique: true,
+    },
     fullname: String,
     groups: [String],
     created_by: String,
     updated_by: String,
     status: {
+      type: String,
       enum: ['active', 'disabled', 'locked'],
+      default: 'active',
     },
-    organization_id: String,
+    organization: {
+      type: String,
+      default: '',
+    },
   },
   {
     timestamps: {
@@ -38,4 +58,4 @@ const UserSchema = new mongoose.Schema<IUser>(
   }
 );
 
-export const User = mongoose.model<IUser>('user', UserSchema);
+export const User = db.model<IUser>('user', UserSchema);

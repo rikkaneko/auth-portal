@@ -1,9 +1,9 @@
-import mongoose from 'mongoose';
+import db from 'mongoose';
 import config from './config';
 
 async function connect() {
   try {
-    await mongoose.connect(config.CONNECTION_STR, {
+    await db.connect(config.CONNECTION_STR, {
       authSource: 'admin',
       socketTimeoutMS: 2000,
       serverSelectionTimeoutMS: 2000,
@@ -17,4 +17,4 @@ async function connect() {
 
 connect().catch(console.dir);
 
-export default mongoose;
+export default db;

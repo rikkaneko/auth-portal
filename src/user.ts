@@ -28,8 +28,17 @@ route.use((req, res, next) => {
           email: payload.email,
           username: payload.username,
           role: payload.role,
+          organization: payload.organization,
         },
       };
+      const plv = auth_info.user?.role.includes('admin') // admin - 3
+        ? 3
+        : auth_info.user?.role.includes('teacher') // teacher - 2
+          ? 2
+          : auth_info.user?.role.includes('student') // student - 1
+            ? 1
+            : 0;
+      auth_info.privilege_level = plv;
       req.auth = auth_info;
     } else {
       const auth_info: AuthInfo = {
@@ -39,7 +48,12 @@ route.use((req, res, next) => {
     }
   } catch (err) {
     console.error(err);
-    res.status(403).send('Invalid token');
+    res.status(403).json({
+      error: {
+        code: 403,
+        message: 'Invalid token',
+      },
+    });
   }
   next();
 });
