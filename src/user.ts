@@ -1,9 +1,11 @@
-import { Router } from 'express';
+import { RequestHandler, Router, json } from 'express';
 import jwt from 'jsonwebtoken';
-import { User } from './models/schema';
+import { User, IUser } from './models/schema';
 
 import { AuthInfo, AuthInfo$User } from './types';
 import config from './config';
+import mongoose from 'mongoose';
+import { error } from 'console';
 
 const route = Router();
 
@@ -58,39 +60,183 @@ route.use((req, res, next) => {
   next();
 });
 
-route.get('/me', async (req, res) => {
-  if (!req.auth.is_auth) {
-    res.status(403).send('403 Unauthorized');
-    return;
-  }
+const required_auth: (min_privilege_level?: number) => RequestHandler =
+  (min_privilege_level: number = 0) =>
+  (req, res, next) => {
+    if (!req.auth.is_auth || (min_privilege_level !== undefined && req.auth.privilege_level! < min_privilege_level)) {
+      res.status(403).json({
+        error: {
+          code: 403,
+          message: 'Unauthorized',
+        },
+      });
+      return;
+    }
+    next();
+  };
+
+route.get('/me', required_auth(), async (req, res) => {
   const result = await User.findOne({ id: req.auth.user?.id }, { groups: 0, _id: 0 });
   if (result === null) {
-    res.status(500).send('500 Internal Error');
+    res.status(404).json({
+      error: {
+        code: 404,
+        message: 'Current user information is not available',
+      },
+    });
     return;
   }
   res.json(result);
 });
 
-route.get('/groups', async (req, res) => {
-  if (!req.auth.is_auth) {
-    res.status(403).send('403 Unauthorized');
-    return;
-  }
+route.get('/groups', required_auth(), async (req, res) => {
   const result = await User.findOne({ id: req.auth.user?.id }, { groups: 1, _id: 0 });
-  // Mocked result
-  // const result = {
-  //   groups: ['polyu:EIE4432_2324S2_1', 'polyu:EIE4108_2324S2_1'],
-  // };
   if (result === null) {
-    res.status(500).send('500 Internal Error');
+    res.status(404).json({
+      error: {
+        code: 404,
+        message: 'Current user information is not available',
+      },
+    });
     return;
   }
   res.json(result);
 });
 
-// Fallback path
-route.use((req, res) => {
-  res.status(403).send('403 Unauthorized');
+route.get('/list/:user_id', required_auth(2), async (req, res) => {
+  const result = await User.findOne({ id: req.params.user_id }, { groups: 0, _id: 0 });
+  if (result === null) {
+    res.status(404).json({
+      error: {
+        code: 404,
+        message: 'User does not exist',
+      },
+    });
+    return;
+  }
+  res.json(result);
+});
+
+route.post('/create', required_auth(2), json(), async (req, res) => {
+  const new_user_info: IUser = req.body;
+  if (
+    req.auth.privilege_level! < 3 && // Require admin
+    (new_user_info?.role?.includes('admin') || new_user_info?.role?.includes('teacher'))
+  ) {
+    res.status(403).json({
+      error: {
+        code: 403,
+        message: 'Permission denied (Assign a new admin role without admin right)',
+      },
+    });
+    return;
+  }
+
+  const email = new_user_info?.linked_email?.split('@');
+  if (!email || email.length !== 2) {
+    res.status(400).json({
+      error: {
+        code: 400,
+        message: 'Invalid data (Invalid email format)',
+      },
+    });
+    return;
+  }
+  const username = new_user_info?.username ?? email[0];
+  const user_id = `${username}`;
+  try {
+    const result = await User.create({
+      ...new_user_info,
+      id: user_id,
+      username,
+      created_by: req.auth.user!.id,
+      updated_by: req.auth.user!.id,
+    });
+    res.json({
+      id: result.id,
+    });
+  } catch (e) {
+    if (e instanceof mongoose.Error.ValidationError) {
+      const err = e;
+      res.status(400).json(err.errors);
+    } else if (e instanceof mongoose.mongo.MongoError && e.code === 11000) {
+      res.status(409).json({
+        error: {
+          code: 409,
+          message: 'Duplicate user email or username (User already exist)',
+        },
+      });
+    } else {
+      res.status(500).json({
+        error: {
+          code: 500,
+          message: 'Unknown error',
+        },
+      });
+      console.error(error);
+    }
+  }
+});
+
+route.post('/delete/:user_id', required_auth(2), async (req, res) => {
+  if (!req.auth.is_auth) {
+    res.status(403).json({
+      error: {
+        code: 403,
+        message: 'Unauthorized',
+      },
+    });
+    return;
+  }
+  const user_id = req.params?.user_id;
+  if (!user_id) {
+    res.status(400).json({
+      code: 400,
+      message: 'Invalid request (Missing user_id param)',
+    });
+  }
+  try {
+    const target_user = await User.findOne({ id: user_id });
+    if (!target_user) {
+      res.status(404).json({
+        error: {
+          code: 404,
+          message: 'User ID does not exist',
+        },
+      });
+      return;
+    }
+    if (
+      req.auth.privilege_level! < 3 && // Require admin
+      (target_user.role?.includes('admin') || target_user.role?.includes('teacher'))
+    ) {
+      res.status(403).json({
+        error: {
+          code: 403,
+          message: 'Permission denied (Remove an admin or a teacher without admin right)',
+        },
+      });
+      return;
+    }
+    await User.deleteOne({ id: user_id });
+    res.json({});
+  } catch (e) {
+    if (e instanceof mongoose.Error.ValidationError) {
+      const err = e;
+      res.status(400).json(err.errors);
+    } else if (e instanceof mongoose.mongo.MongoError) {
+      res.status(400).json({
+        error: {
+          code: 400,
+          message: 'Unable to remove the specific user',
+        },
+      });
+    }
+  }
+});
+
+route.post('/update/:user_id?', required_auth(), async (req, res) => {
+  // TODO
 });
 
 export default route;

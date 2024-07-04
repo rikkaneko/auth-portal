@@ -20,6 +20,7 @@ export interface AuthInfo$User {
   role: string[];
   username: string;
   email: string;
+  organization: string;
 }
 
 export interface AuthInfo {
@@ -28,4 +29,5 @@ export interface AuthInfo {
     id_token: string;
   };
   user?: AuthInfo$User;
+  privilege_level?: number;
 }
