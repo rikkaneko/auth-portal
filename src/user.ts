@@ -9,47 +9,66 @@ import { error } from 'console';
 
 const route = Router();
 
-route.use((req, res, next) => {
+export const verify_token = (id_token?: string) => {
+  if (!id_token) return null;
   try {
-    if (req.cookies?.id_token) {
-      const decoded = jwt.verify(req.cookies.id_token, config.JWT_VERIFY_KEY, {
-        algorithms: ['ES256'],
-        issuer: config.JWT_SIGN_ISSUER,
-        subject: 'login-auth-token',
-        complete: true,
-      });
-      const payload = decoded.payload as AuthInfo$User;
-      const auth_info: AuthInfo = {
-        is_auth: true,
-        token_info: {
-          id_token: req.cookies.id_token,
-          ...decoded,
-        },
-        user: {
-          id: payload.id,
-          email: payload.email,
-          username: payload.username,
-          role: payload.role,
-          organization: payload.organization,
-        },
-      };
-      const plv = auth_info.user?.role.includes('admin') // admin - 3
-        ? 3
-        : auth_info.user?.role.includes('teacher') // teacher - 2
-          ? 2
-          : auth_info.user?.role.includes('student') // student - 1
-            ? 1
-            : 0;
-      auth_info.privilege_level = plv;
-      req.auth = auth_info;
-    } else {
+    const decoded = jwt.verify(id_token, config.JWT_VERIFY_KEY, {
+      algorithms: ['ES256'],
+      issuer: config.JWT_SIGN_ISSUER,
+      subject: 'login-auth-token',
+      complete: true,
+    });
+    return decoded;
+  } catch (e) {
+    if (e instanceof Error) console.error(e.message);
+    return null;
+  }
+};
+
+export const do_auth: RequestHandler = (req, res, next) => {
+  try {
+    let id_token: string | undefined = undefined;
+    if (req.headers?.authorization) {
+      const authorization = req.headers.authorization.split('\x20');
+      if (authorization.length === 2 && authorization[0] == 'Bearer') id_token = authorization[1];
+    } else if (req.cookies?.id_token) {
+      id_token = req.cookies.id_token;
+    }
+    const decoded = verify_token(id_token);
+    if (decoded == null) {
       const auth_info: AuthInfo = {
         is_auth: false,
       };
       req.auth = auth_info;
+      next();
+      return;
     }
-  } catch (err) {
-    console.error(err);
+    const payload = decoded.payload as AuthInfo$User;
+    const auth_info: AuthInfo = {
+      is_auth: true,
+      token_info: {
+        id_token: id_token!,
+        ...decoded,
+      },
+      user: {
+        id: payload.id,
+        email: payload.email,
+        username: payload.username,
+        role: payload.role,
+        organization: payload.organization,
+      },
+    };
+    const plv = auth_info.user?.role.includes('admin') // admin - 3
+      ? 3
+      : auth_info.user?.role.includes('teacher') // teacher - 2
+        ? 2
+        : auth_info.user?.role.includes('student') // student - 1
+          ? 1
+          : 0;
+    auth_info.privilege_level = plv;
+    req.auth = auth_info;
+  } catch (e) {
+    if (e instanceof Error) console.error(e.message);
     res.status(403).json({
       error: {
         code: 403,
@@ -58,9 +77,11 @@ route.use((req, res, next) => {
     });
   }
   next();
-});
+};
 
-const required_auth: (min_privilege_level?: number) => RequestHandler =
+route.use(do_auth);
+
+export const required_auth: (min_privilege_level?: number) => RequestHandler =
   (min_privilege_level: number = 0) =>
   (req, res, next) => {
     if (!req.auth.is_auth || (min_privilege_level !== undefined && req.auth.privilege_level! < min_privilege_level)) {
