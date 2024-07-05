@@ -1,100 +1,11 @@
 import { RequestHandler, Router, json } from 'express';
-import jwt from 'jsonwebtoken';
 import { User, IUser } from './models/schema';
-
-import { AuthInfo, AuthInfo$User } from './types';
-import config from './config';
 import mongoose from 'mongoose';
-import { error } from 'console';
+import { do_auth, required_auth } from './auth';
 
 const route = Router();
 
-export const verify_token = (id_token?: string) => {
-  if (!id_token) return null;
-  try {
-    const decoded = jwt.verify(id_token, config.JWT_VERIFY_KEY, {
-      algorithms: ['ES256'],
-      issuer: config.JWT_SIGN_ISSUER,
-      subject: 'login-auth-token',
-      complete: true,
-    });
-    return decoded;
-  } catch (e) {
-    if (e instanceof Error) console.error(e.message);
-    return null;
-  }
-};
-
-export const do_auth: RequestHandler = (req, res, next) => {
-  try {
-    let id_token: string | undefined = undefined;
-    if (req.headers?.authorization) {
-      const authorization = req.headers.authorization.split('\x20');
-      if (authorization.length === 2 && authorization[0] == 'Bearer') id_token = authorization[1];
-    } else if (req.cookies?.id_token) {
-      id_token = req.cookies.id_token;
-    }
-    const decoded = verify_token(id_token);
-    if (decoded == null) {
-      const auth_info: AuthInfo = {
-        is_auth: false,
-      };
-      req.auth = auth_info;
-      next();
-      return;
-    }
-    const payload = decoded.payload as AuthInfo$User;
-    const auth_info: AuthInfo = {
-      is_auth: true,
-      token_info: {
-        id_token: id_token!,
-        ...decoded,
-      },
-      user: {
-        id: payload.id,
-        email: payload.email,
-        username: payload.username,
-        role: payload.role,
-        organization: payload.organization,
-      },
-    };
-    const plv = auth_info.user?.role.includes('admin') // admin - 3
-      ? 3
-      : auth_info.user?.role.includes('teacher') // teacher - 2
-        ? 2
-        : auth_info.user?.role.includes('student') // student - 1
-          ? 1
-          : 0;
-    auth_info.privilege_level = plv;
-    req.auth = auth_info;
-  } catch (e) {
-    if (e instanceof Error) console.error(e.message);
-    res.status(403).json({
-      error: {
-        code: 403,
-        message: 'Invalid token',
-      },
-    });
-  }
-  next();
-};
-
 route.use(do_auth);
-
-export const required_auth: (min_privilege_level?: number) => RequestHandler =
-  (min_privilege_level: number = 0) =>
-  (req, res, next) => {
-    if (!req.auth.is_auth || (min_privilege_level !== undefined && req.auth.privilege_level! < min_privilege_level)) {
-      res.status(403).json({
-        error: {
-          code: 403,
-          message: 'Unauthorized',
-        },
-      });
-      return;
-    }
-    next();
-  };
 
 route.get('/me', required_auth(), async (req, res) => {
   const result = await User.findOne({ id: req.auth.user?.id }, { groups: 0, _id: 0 });
@@ -139,6 +50,7 @@ route.get('/list/:user_id', required_auth(2), async (req, res) => {
 });
 
 route.post('/create', required_auth(2), json(), async (req, res) => {
+  const allowed_fields = ['role', 'username', 'linked_email', 'fullname', 'status'];
   const new_user_info: IUser = req.body;
   if (
     req.auth.privilege_level! < 3 && // Require admin
@@ -166,6 +78,17 @@ route.post('/create', required_auth(2), json(), async (req, res) => {
   const username = new_user_info?.username ?? email[0];
   const user_id = `${username}`;
   try {
+    // Validate update data fields
+    if (!Object.keys(new_user_info).every((key) => allowed_fields.includes(key))) {
+      res.status(400).json({
+        error: {
+          code: 400,
+          message: 'Invalid data (Invalid data fields)',
+          allowed_fields,
+        },
+      });
+      return;
+    }
     const result = await User.create({
       ...new_user_info,
       id: user_id,
@@ -178,8 +101,18 @@ route.post('/create', required_auth(2), json(), async (req, res) => {
     });
   } catch (e) {
     if (e instanceof mongoose.Error.ValidationError) {
-      const err = e;
-      res.status(400).json(err.errors);
+      const errors = Object.fromEntries(
+        Object.entries(e.errors as Record<string, mongoose.Error.ValidatorError>).map(([key, value]) => [
+          key,
+          value.message,
+        ])
+      );
+      res.status(400).json({
+        error: {
+          code: 400,
+          errors,
+        },
+      });
     } else if (e instanceof mongoose.mongo.MongoError && e.code === 11000) {
       res.status(409).json({
         error: {
@@ -194,27 +127,19 @@ route.post('/create', required_auth(2), json(), async (req, res) => {
           message: 'Unknown error',
         },
       });
-      console.error(error);
+      console.error(e);
     }
   }
 });
 
 route.post('/delete/:user_id', required_auth(2), async (req, res) => {
-  if (!req.auth.is_auth) {
-    res.status(403).json({
-      error: {
-        code: 403,
-        message: 'Unauthorized',
-      },
-    });
-    return;
-  }
   const user_id = req.params?.user_id;
-  if (!user_id) {
+  if (user_id === req.auth.user?.id) {
     res.status(400).json({
       code: 400,
-      message: 'Invalid request (Missing user_id param)',
+      message: 'Invalid request (Cannot delete the current user)',
     });
+    return;
   }
   try {
     const target_user = await User.findOne({ id: user_id });
@@ -256,8 +181,76 @@ route.post('/delete/:user_id', required_auth(2), async (req, res) => {
   }
 });
 
-route.post('/update/:user_id?', required_auth(), async (req, res) => {
-  // TODO
+route.post('/update/:user_id?', required_auth(), json(), async (req, res) => {
+  const allowed_fields = ['username', 'linked_email', 'fullname', 'status'];
+  let user_id = req.params?.user_id;
+  if (user_id && req.auth.privilege_level! < 3) {
+    res.status(403).json({
+      error: {
+        code: 403,
+        message: 'Permission denied (Require admin role)',
+      },
+    });
+    return;
+  }
+  if (!user_id) user_id = req.auth.user!.id;
+  const update_fields = req.body;
+  if (!update_fields) {
+    res.status(400).json({
+      error: {
+        code: 400,
+        message: 'Invalid data (Request body cannot be empty)',
+      },
+    });
+    return;
+  }
+  try {
+    // Validate update data fields
+    if (!Object.keys(update_fields).every((key) => allowed_fields.includes(key))) {
+      res.status(400).json({
+        error: {
+          code: 400,
+          message: 'Invalid data (Invalid data fields)',
+          allowed_fields,
+        },
+      });
+      return;
+    }
+    await User.updateOne({ id: user_id }, update_fields);
+    res.json({
+      update: update_fields,
+    });
+  } catch (e) {
+    if (e instanceof mongoose.Error.ValidationError) {
+      const errors = Object.fromEntries(
+        Object.entries(e.errors as Record<string, mongoose.Error.ValidatorError>).map(([key, value]) => [
+          key,
+          value.message,
+        ])
+      );
+      res.status(400).json({
+        error: {
+          code: 400,
+          errors,
+        },
+      });
+    } else if (e instanceof mongoose.mongo.MongoError) {
+      res.status(400).json({
+        error: {
+          code: 400,
+          message: 'Unable to remove the specific user',
+        },
+      });
+    } else {
+      res.status(500).json({
+        error: {
+          code: 500,
+          message: 'Unknown error',
+        },
+      });
+      console.error(e);
+    }
+  }
 });
 
 export default route;
