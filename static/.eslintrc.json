@@ -1,0 +1,15 @@
+{
+  "extends": ["eslint:recommended", "plugin:@typescript-eslint/recommended"],
+  "root": true,
+  "env": {
+    "es6": true,
+    "browser": true,
+    "jquery": true
+  },
+  "rules": {
+    "no-unused-vars": "off"
+  },
+  "globals": {
+    "$": true
+  }
+}

@@ -9,6 +9,7 @@ import client from './dbclient';
 import session from 'express-session';
 import cookie_parser from 'cookie-parser';
 import mongostore from 'connect-mongo';
+import path from 'path';
 
 const app = express().disable('x-powered-by');
 
@@ -41,7 +42,7 @@ app.use(cookie_parser());
 
 app.get('/', (req, res) => {
   if (!req.session.user?.logged) {
-    res.redirect('/auth');
+    res.redirect('/frontend/login');
     return;
   }
   res.redirect('/api/auth/me');
@@ -50,6 +51,17 @@ app.get('/', (req, res) => {
 app.use('/api/auth', auth);
 
 app.use('/api/user', user);
+
+app.use(
+  '/frontend',
+  (req, res, next) => {
+    if (req.path.endsWith('.json')) res.status(404).end();
+    next();
+  },
+  express.static(path.join(process.cwd(), '/static'), {
+    extensions: ['html'],
+  })
+);
 
 // Fallback path
 app.use((req, res) => {

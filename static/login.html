@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auth Portal SSO login-text</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <style>
+    .btn {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .btn-icon {
+      font-size: 2rem;
+      margin-right: 0.5rem;
+    }
+    .btn-text {
+      text-align: center;
+      flex-grow: 1;
+    }
+    .login-text {
+      display: flex;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+    .login-text::before,
+    .login-text::after {
+      content: "";
+      flex-grow: 1;
+      background-color: #ccc;
+      height: 1px;
+      margin: 0 0.5rem;
+    }
+    .card-body {
+      background-color: #fff;
+      border-radius: 0.5rem;
+      box-shadow: 0rem 0.8rem 1rem rgba(0, 0, 0, 0.3);
+      padding: 1.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container d-flex justify-content-center align-items-center" style="height: 100vh;">
+    <div class="card" style="width: 28rem;">
+      <div class="card-body">
+        <div class="login-text">Login with</div>
+        <a href="#" class="btn btn-primary w-100 mb-3" id="ms_login_btn">
+          <i class="fab fa-microsoft btn-icon"></i>
+          <span class="btn-text">Microsoft</span>
+          <i class=""></i>
+        </a>
+        <a href="#" class="btn btn-danger w-100" id="google_login_btn">
+          <i class="fab fa-google btn-icon"></i>
+          <span class="btn-text">Google</span>
+          <i class=""></i>
+        </a>
+      </div>
+    </div>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="login.js"></script>
+</body>
+</html>
