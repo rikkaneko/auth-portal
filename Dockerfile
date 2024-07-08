@@ -11,14 +11,15 @@ COPY . /app
 RUN --mount=type=cache,id=auth-portal-pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 RUN pnpm run build:production
 
-FROM base as production
+FROM base AS production
 WORKDIR /app
 ENV NODE_ENV=production
 RUN addgroup -g 1001 -S nodejs
 RUN adduser -S nextjs -u 1001
 
-# COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+# COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules  
 COPY --from=builder --chown=nextjs:nodejs /app/dist/ ./dist
+COPY --from=builder --chown=nextjs:nodejs /app/static/ ./static
 COPY --from=builder --chown=nextjs:nodejs /app/package.json /app/.env /app/server.pem /app/server.pub ./
 
 USER nextjs
