@@ -14,6 +14,9 @@ export const pre_login_handle: RequestHandler = (req, _, next) => {
     if (req.query?.redirect_url) {
       req.session.redirect_url = req.query.redirect_url as string;
     }
+    if (req.query?.failed_redirect_url) {
+      req.session.failed_redirect_url = req.query.failed_redirect_url as string;
+    }
     next();
   });
 };
@@ -103,14 +106,12 @@ export const required_auth: (min_privilege_level?: number) => RequestHandler =
     next();
   };
 
-route.get('/', (_, res) => {
-  res.send('Please select your SSO provider: microsoft, google');
-});
-
 route.get('/logout', (req, res) => {
   res.clearCookie('id_token');
   req.session.destroy(() => {
-    res.json({});
+    if (req.query?.redirect_url) {
+      res.redirect(req.query.redirect_url as string);
+    } else res.json({});
   });
 });
 
@@ -119,31 +120,10 @@ route.use('/microsoft', microsoft);
 route.use('/google', google);
 
 // Example use-case: Verify current login user
-route.get('/token_info', (req, res) => {
-  if (!req.cookies?.id_token) {
-    res.redirect('/auth');
-    return;
-  }
-
-  try {
-    const decoded = jwt.verify(req.cookies?.id_token, config.JWT_VERIFY_KEY, {
-      algorithms: ['ES256'],
-      issuer: config.JWT_SIGN_ISSUER,
-      subject: 'login-auth-token',
-      complete: true,
-    });
-    res.json({
-      token: decoded,
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(403).json({
-      error: {
-        code: 403,
-        message: 'Invalid token',
-      },
-    });
-  }
+route.get('/token_info', do_auth, required_auth(), (req, res) => {
+  res.json({
+    token: req.auth.token_info,
+  });
 });
 
 route.get('/token', async (req, res) => {
@@ -156,16 +136,26 @@ route.get('/token', async (req, res) => {
     });
     return;
   }
-  res.clearCookie('id_token');
+  res.clearCookie('id_token', {
+    // sameSite: 'none',
+    domain: config.APP_DOMAIN,
+  });
   // Verify user login information
   const user = await User.findOne({ linked_email: req.session.user.email });
   if (user === null) {
-    res.status(403).json({
-      error: {
-        code: 403,
-        message: 'Logged user is not registed to the system',
-      },
-    });
+    // Invalidate old session
+    req.session.destroy(() => {});
+    const redirect_url = req.session.failed_redirect_url;
+    if (redirect_url) {
+      res.redirect(redirect_url);
+    } else {
+      res.status(403).json({
+        error: {
+          code: 403,
+          message: 'Logged user is not registed to the system',
+        },
+      });
+    }
     return;
   }
   // Generate and signed id token jwt

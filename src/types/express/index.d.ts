@@ -13,6 +13,7 @@ declare global {
 declare module 'express-session' {
   interface SessionData {
     redirect_url?: string;
+    failed_redirect_url?: string;
     state?: string;
     pkce?: {
       codes?: string;

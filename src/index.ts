@@ -1,4 +1,5 @@
 import express, { ErrorRequestHandler } from 'express';
+import cors from 'cors';
 import 'express-async-errors';
 import config from './config';
 import auth from './auth';
@@ -29,6 +30,13 @@ app.use(
   })
 );
 
+const cors_opts: cors.CorsOptions = {
+  origin: [/http:\/\/localhost:*([0-9]+)?$/],
+  credentials: true,
+};
+
+app.use(cors(cors_opts));
+
 app.use(cookie_parser());
 
 app.get('/', (req, res) => {
@@ -36,12 +44,12 @@ app.get('/', (req, res) => {
     res.redirect('/auth');
     return;
   }
-  res.redirect('/auth/me');
+  res.redirect('/api/auth/me');
 });
 
-app.use('/auth', auth);
+app.use('/api/auth', auth);
 
-app.use('/user', user);
+app.use('/api/user', user);
 
 // Fallback path
 app.use((req, res) => {

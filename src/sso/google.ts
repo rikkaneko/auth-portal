@@ -54,7 +54,7 @@ route.get('/callback', async (req, res) => {
       const { sub } = await oauth.getTokenInfo(tokens.access_token!);
       oauth.setCredentials(tokens);
       const { data }: { data: OAuth2Client$Userinfo } = await oauth.request({
-        url: ' https://www.googleapis.com/userinfo/v2/me',
+        url: 'https://www.googleapis.com/userinfo/v2/me',
         method: 'GET',
       });
       const user = {
@@ -65,7 +65,7 @@ route.get('/callback', async (req, res) => {
       };
       console.log('\nResponse: \n', user);
       req.session.user = user;
-      res.redirect('/auth/token');
+      res.redirect('/api/auth/token');
     } catch (err) {
       console.error(err);
       res.status(500).json({

@@ -1,4 +1,4 @@
-import { RequestHandler, Router, json } from 'express';
+import { Router, json } from 'express';
 import { User, IUser } from './models/schema';
 import mongoose from 'mongoose';
 import { do_auth, required_auth } from './auth';
@@ -46,6 +46,11 @@ route.get('/list/:user_id', required_auth(2), async (req, res) => {
     });
     return;
   }
+  res.json(result);
+});
+
+route.get('/list', required_auth(2), async (req, res) => {
+  const result = await User.find({}, { groups: 0, _id: 0 });
   res.json(result);
 });
 
