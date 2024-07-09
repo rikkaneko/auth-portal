@@ -42,10 +42,10 @@ app.use(cookie_parser());
 
 app.get('/', (req, res) => {
   if (!req.session.user?.logged) {
-    res.redirect('/frontend/login');
+    res.redirect(config.APP_PATH_PREFIX + '/frontend/login');
     return;
   }
-  res.redirect('/api/auth/me');
+  res.redirect(config.APP_PATH_PREFIX + '/api/auth/me');
 });
 
 app.use('/api/auth', auth);

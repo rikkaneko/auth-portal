@@ -10,6 +10,7 @@ const APP_DOMAIN = process.env.APP_DOMAIN ?? `http://localhost:${APP_PORT}`;
 const config = {
   APP_DOMAIN, // Server Domain
   APP_PORT, // Server Port
+  APP_PATH_PREFIX: process.env.APP_PATH_PREFIX ?? '', // The Prefix Path (Behind Proxy)
   SESSION_SECRET_KEY: process.env.SESSION_SECRET_KEY ?? crypto.randomBytes(32).toString('hex'), // Session key for express-session (Default: Random generated 32 byte key)
   MS_AUTH_CLIENT_ID: process.env.MS_AUTH_CLIENT_ID!, // OAuth2 Client ID for Microsoft SSO
   MS_AUTH_CLIENT_SECRET: process.env.MS_AUTH_CLIENT_SECRET!, // OAuth2 Client Secret for Microsoft SSO
