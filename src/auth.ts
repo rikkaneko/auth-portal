@@ -145,7 +145,7 @@ route.get('/token', async (req, res) => {
   if (user === null) {
     // Invalidate old session
     req.session.destroy(() => {});
-    const redirect_url = req.session.failed_redirect_url;
+    const redirect_url = req.session?.failed_redirect_url;
     if (redirect_url) {
       res.redirect(redirect_url);
     } else {
