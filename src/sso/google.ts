@@ -39,7 +39,7 @@ route.get('/callback', async (req, res) => {
       status: 'failed',
       message: q.error,
     });
-  } else if (q.state && q.state !== req.session.state) {
+  } else if (q.state && q.state !== req.session?.state) {
     console.log('State mismatch. Possible CSRF attack');
     res.status(403).json({
       error: {

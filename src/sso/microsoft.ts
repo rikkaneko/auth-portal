@@ -23,7 +23,7 @@ const route = Router();
 route.get('/', pre_login_handle, async (req, res) => {
   const crypt = new CryptoProvider();
   const { challenge, verifier } = await crypt.generatePkceCodes();
-  if (!req.session.pkce) {
+  if (!req.session?.pkce) {
     req.session.pkce = {
       challenge_method: 'S256',
     };
@@ -50,11 +50,21 @@ route.get('/', pre_login_handle, async (req, res) => {
 
 route.get('/callback', async (req, res) => {
   // Add PKCE code verifier to token request object
+  if (!req.session?.pkce) {
+    res.status(400).json({
+      error: {
+        code: 400,
+        message: 'Invalid Request',
+      },
+    });
+    return;
+  }
+
   const token_request: AuthorizationCodeRequest = {
     code: req.query.code as string,
     scopes: ['User.Read', 'email', 'profile', 'openid'],
     redirectUri: config.MS_AUTH_LOGIN_CALLBACK,
-    codeVerifier: req.session.pkce!.verifier, // PKCE Code Verifier
+    codeVerifier: req.session.pkce.verifier, // PKCE Code Verifier
     clientInfo: req.query.client_info as string,
   };
 
@@ -71,11 +81,12 @@ route.get('/callback', async (req, res) => {
     req.session.user = user;
     res.redirect(config.APP_PATH_PREFIX + '/api/auth/token');
   } catch (err) {
+    console.log('State mismatch. Possible CSRF attack');
     console.log(err);
     res.status(500).json({
       error: {
         code: 500,
-        err,
+        message: 'CSRF state mismatch',
       },
     });
   }
