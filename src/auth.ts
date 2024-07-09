@@ -107,7 +107,10 @@ export const required_auth: (min_privilege_level?: number) => RequestHandler =
   };
 
 route.get('/logout', (req, res) => {
-  res.clearCookie('id_token');
+  res.clearCookie('id_token', {
+    // sameSite: 'none',
+    domain: config.APP_DOMAIN,
+  });
   req.session.destroy(() => {
     if (req.query?.redirect_url) {
       res.redirect(req.query.redirect_url as string);
