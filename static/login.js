@@ -5,10 +5,10 @@ $(function () {
   }
 
   $('#ms_login_btn').on('click', function () {
-    goto_with_query('/api/auth/microsoft');
+    goto_with_query('../api/auth/microsoft');
   });
 
   $('#google_login_btn').on('click', function () {
-    goto_with_query('/api/auth/google');
+    goto_with_query('../api/auth/google');
   });
 });
