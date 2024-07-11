@@ -14,6 +14,7 @@ declare module 'express-session' {
   interface SessionData {
     redirect_url?: string;
     failed_redirect_url?: string;
+    need_refresh_token?: boolean;
     state?: string;
     pkce?: {
       codes?: string;

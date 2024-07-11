@@ -1,111 +1,16 @@
-import { RequestHandler, Router } from 'express';
-import jwt from 'jsonwebtoken';
+import { Router } from 'express';
+import crypto from 'crypto';
 
 import microsoft from './sso/microsoft';
 import google from './sso/google';
 import { User } from './models/schema';
 import config from './config';
-import { AuthInfo, AuthInfo$User } from './types';
+import { AuthResponse } from './types';
+import { do_auth, get_token, required_auth, sign_token } from './util';
 
 const route = Router();
 
-export const pre_login_handle: RequestHandler = (req, _, next) => {
-  req.session.regenerate(() => {
-    if (req.query?.redirect_url) {
-      req.session.redirect_url = req.query.redirect_url as string;
-    }
-    if (req.query?.failed_redirect_url) {
-      req.session.failed_redirect_url = req.query.failed_redirect_url as string;
-    }
-    next();
-  });
-};
-
-export const verify_token = (id_token?: string) => {
-  if (!id_token) return null;
-  try {
-    const decoded = jwt.verify(id_token, config.JWT_VERIFY_KEY, {
-      algorithms: ['ES256'],
-      issuer: config.JWT_SIGN_ISSUER,
-      subject: 'login-auth-token',
-      complete: true,
-    });
-    return decoded;
-  } catch (e) {
-    if (e instanceof Error) console.error(e.message);
-    return null;
-  }
-};
-
-export const do_auth: RequestHandler = (req, res, next) => {
-  try {
-    let id_token: string | undefined = undefined;
-    if (req.headers?.authorization) {
-      const authorization = req.headers.authorization.split('\x20');
-      if (authorization.length === 2 && authorization[0] == 'Bearer') id_token = authorization[1];
-    } else if (req.cookies?.id_token) {
-      id_token = req.cookies.id_token;
-    }
-    const decoded = verify_token(id_token);
-    if (decoded == null) {
-      const auth_info: AuthInfo = {
-        is_auth: false,
-      };
-      req.auth = auth_info;
-      next();
-      return;
-    }
-    const payload = decoded.payload as AuthInfo$User;
-    const auth_info: AuthInfo = {
-      is_auth: true,
-      token_info: {
-        id_token: id_token!,
-        ...decoded,
-      },
-      user: {
-        id: payload.id,
-        email: payload.email,
-        username: payload.username,
-        role: payload.role,
-        organization: payload.organization,
-      },
-    };
-    const plv = auth_info.user?.role.includes('admin') // admin - 3
-      ? 3
-      : auth_info.user?.role.includes('teacher') // teacher - 2
-        ? 2
-        : auth_info.user?.role.includes('student') // student - 1
-          ? 1
-          : 0;
-    auth_info.privilege_level = plv;
-    req.auth = auth_info;
-  } catch (e) {
-    if (e instanceof Error) console.error(e.message);
-    res.status(403).json({
-      error: {
-        code: 403,
-        message: 'Invalid token',
-      },
-    });
-  }
-  next();
-};
-
-export const required_auth: (min_privilege_level?: number) => RequestHandler =
-  (min_privilege_level: number = 0) =>
-  (req, res, next) => {
-    if (!req.auth.is_auth || (min_privilege_level !== undefined && req.auth.privilege_level! < min_privilege_level)) {
-      res.status(403).json({
-        error: {
-          code: 403,
-          message: 'Unauthorized',
-        },
-      });
-      return;
-    }
-    next();
-  };
-
+// For frontend logout
 route.get('/logout', (req, res) => {
   res.clearCookie('id_token', {
     // sameSite: 'none',
@@ -118,8 +23,10 @@ route.get('/logout', (req, res) => {
   });
 });
 
+// Microsoft SSO Login
 route.use('/microsoft', microsoft);
 
+// Google SSO Login
 route.use('/google', google);
 
 // Example use-case: Verify current login user
@@ -129,6 +36,8 @@ route.get('/token_info', do_auth, required_auth(), (req, res) => {
   });
 });
 
+// Retrieve access token (and refresh token if specified with need_refresh_token=1 in login request) after login
+// Can only call once
 route.get('/token', async (req, res) => {
   if (!req.session.user?.logged) {
     res.status(403).json({
@@ -139,57 +48,125 @@ route.get('/token', async (req, res) => {
     });
     return;
   }
-  res.clearCookie('id_token', {
-    // sameSite: 'none',
-    domain: config.APP_DOMAIN,
-  });
-  // Verify user login information
-  const user = await User.findOne({ linked_email: req.session.user.email });
-  if (user === null) {
+  try {
+    // Verify user login information
+    const user = await User.findOne({ linked_email: req.session.user.email });
+    if (user === null) {
+      const redirect_url = req.session?.failed_redirect_url;
+      if (redirect_url) {
+        res.redirect(redirect_url);
+      } else {
+        res.status(403).json({
+          error: {
+            code: 403,
+            message: 'Logged user is not registed to the system',
+          },
+        });
+      }
+      return;
+    }
+    const signed_token = sign_token(user);
+    res.cookie('id_token', signed_token, {
+      httpOnly: false,
+      // sameSite: 'none',
+      domain: config.APP_DOMAIN,
+      maxAge: 14400000,
+    });
+    const auth_response: AuthResponse = {
+      auth_token: signed_token,
+    };
+    if (req.session.need_refresh_token === true) {
+      const refresh_token = crypto.randomBytes(64).toString('base64');
+      const expiration = new Date(Date.now() + 12 * 60 * 60 * 1000); // 12 hours
+      await User.updateOne(
+        { id: user.id },
+        {
+          $push: {
+            refresh_tokens: {
+              token: refresh_token,
+              expiration,
+            },
+          },
+        }
+      );
+      auth_response.refresh_token = refresh_token;
+      auth_response.expiration = expiration.getTime();
+    }
+    const redirect_url = req.session.redirect_url;
     // Invalidate old session
-    req.session.destroy(() => {});
-    const redirect_url = req.session?.failed_redirect_url;
-    if (redirect_url) {
-      res.redirect(redirect_url);
-    } else {
+    req.session.destroy(() => {
+      if (redirect_url) {
+        res.redirect(
+          `${redirect_url}?${new URLSearchParams(
+            Object.fromEntries(Object.entries(auth_response).map(([k, v]) => [k, v.toString()]))
+          )}`
+        );
+      } else {
+        res.json(auth_response);
+      }
+    });
+  } catch (e) {
+    res.status(500).json({
+      error: {
+        code: 500,
+        message: 'Internal error',
+      },
+    });
+    console.error(e);
+  }
+});
+
+// Retrieve access token with refresh token
+route.post('/token', async (req, res) => {
+  try {
+    const token = get_token(req, 'refresh_token');
+    const user = await User.findOne(
+      { 'refresh_tokens.token': token },
+      {
+        groups: 0,
+        _id: 0,
+        refresh_tokens: {
+          $elemMatch: { token },
+        },
+      }
+    );
+    if (user === null) {
       res.status(403).json({
         error: {
           code: 403,
-          message: 'Logged user is not registed to the system',
+          message: 'Invalid token',
         },
       });
+      return;
     }
-    return;
-  }
-  // Generate and signed id token jwt
-  const user_info: AuthInfo$User = {
-    id: user.id,
-    role: user.role,
-    username: user.username,
-    email: user.linked_email,
-    organization: user.organization,
-  };
-  const signed = jwt.sign(user_info, config.JWT_SIGN_KEY, {
-    algorithm: 'ES256',
-    expiresIn: 4 * 60 * 60,
-    issuer: config.JWT_SIGN_ISSUER,
-    subject: 'login-auth-token',
-  });
-  res.cookie('id_token', signed, {
-    httpOnly: false,
-    // sameSite: 'none',
-    domain: config.APP_DOMAIN,
-    maxAge: 14400000,
-  });
-  const redirect_url = req.session.redirect_url;
-  // Invalidate old session
-  req.session.destroy(() => {});
-  if (redirect_url) {
-    res.redirect(`${redirect_url}?auth_token=${signed}`);
-  } else {
-    res.json({
-      id_token: signed,
+    if (user.refresh_tokens[0].expiration < new Date()) {
+      await User.updateOne({ id: user.id }, { $pull: { refresh_tokens: { token } } });
+      res.status(401).json({
+        error: {
+          code: 401,
+          message: 'Token exprired',
+        },
+      });
+      return;
+    }
+    const signed_token = sign_token(user);
+    res.cookie('id_token', signed_token, {
+      httpOnly: false,
+      // sameSite: 'none',
+      domain: config.APP_DOMAIN,
+      maxAge: 14400000,
     });
+    res.json({
+      auth_token: signed_token,
+    });
+  } catch (e) {
+    res.status(500).json({
+      error: {
+        code: 500,
+        message: 'Internal error',
+      },
+    });
+    console.error(e);
   }
 });
 

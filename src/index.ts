@@ -5,6 +5,7 @@ import config from './config';
 import auth from './auth';
 import user from './user';
 import client from './dbclient';
+import { do_auth } from './util';
 
 import session from 'express-session';
 import cookie_parser from 'cookie-parser';
@@ -40,12 +41,12 @@ app.use(cors(cors_opts));
 
 app.use(cookie_parser());
 
-app.get('/', (req, res) => {
-  if (!req.session.user?.logged) {
-    res.redirect(config.APP_PATH_PREFIX + '/frontend/login');
+app.get('/', do_auth, (req, res) => {
+  if (req.auth.is_auth) {
+    res.redirect(config.APP_PATH_PREFIX + '/api/user/me');
     return;
   }
-  res.redirect(config.APP_PATH_PREFIX + '/api/auth/me');
+  res.redirect(config.APP_PATH_PREFIX + '/frontent/login');
 });
 
 app.use('/api/auth', auth);

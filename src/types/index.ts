@@ -31,3 +31,9 @@ export interface AuthInfo {
   user?: AuthInfo$User;
   privilege_level?: number;
 }
+
+export interface AuthResponse {
+  auth_token: string;
+  refresh_token?: string;
+  expiration?: number; // Timestamp (in milliseconds)
+}

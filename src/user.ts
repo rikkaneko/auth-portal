@@ -1,14 +1,21 @@
 import { Router, json } from 'express';
 import { User, IUser } from './models/schema';
 import mongoose from 'mongoose';
-import { do_auth, required_auth } from './auth';
+import { do_auth, required_auth } from './util';
+import { email_validator } from './util';
 
 const route = Router();
+
+const hidden_user_field = {
+  _id: 0,
+  groups: 0,
+  refresh_tokens: 0,
+};
 
 route.use(do_auth);
 
 route.get('/me', required_auth(), async (req, res) => {
-  const result = await User.findOne({ id: req.auth.user?.id }, { groups: 0, _id: 0 });
+  const result = await User.findOne({ id: req.auth.user?.id }, { ...hidden_user_field });
   if (result === null) {
     res.status(404).json({
       error: {
@@ -22,7 +29,7 @@ route.get('/me', required_auth(), async (req, res) => {
 });
 
 route.get('/groups', required_auth(), async (req, res) => {
-  const result = await User.findOne({ id: req.auth.user?.id }, { groups: 1, _id: 0 });
+  const result = await User.findOne({ id: req.auth.user?.id }, { ...hidden_user_field, groups: 1 });
   if (result === null) {
     res.status(404).json({
       error: {
@@ -35,8 +42,8 @@ route.get('/groups', required_auth(), async (req, res) => {
   res.json(result);
 });
 
-route.get('/list/:user_id', required_auth(2), async (req, res) => {
-  const result = await User.findOne({ id: req.params.user_id }, { groups: 0, _id: 0 });
+route.get('/list/:user_id?', required_auth(2), async (req, res) => {
+  const result = await User.find(req.params.user_id ? { id: req.params.user_id } : {}, { ...hidden_user_field });
   if (result === null) {
     res.status(404).json({
       error: {
@@ -49,29 +56,23 @@ route.get('/list/:user_id', required_auth(2), async (req, res) => {
   res.json(result);
 });
 
-route.get('/list', required_auth(2), async (req, res) => {
-  const result = await User.find({}, { groups: 0, _id: 0 });
-  res.json(result);
-});
-
 route.post('/create', required_auth(2), json(), async (req, res) => {
-  const allowed_fields = ['role', 'username', 'linked_email', 'fullname', 'status'];
+  const allowed_fields = ['role', 'username', 'linked_email', 'fullname', 'status', 'organization'];
   const new_user_info: IUser = req.body;
-  if (
-    req.auth.privilege_level! < 3 && // Require admin
-    (new_user_info?.role?.includes('admin') || new_user_info?.role?.includes('teacher'))
-  ) {
-    res.status(403).json({
-      error: {
-        code: 403,
-        message: 'Permission denied (Assign a new admin role without admin right)',
-      },
-    });
+  if (req.auth.privilege_level! < 3) {
+    // Require admin role
+    if (new_user_info?.role?.includes('admin') || new_user_info?.role?.includes('teacher'))
+      res.status(403).json({
+        error: {
+          code: 403,
+          message: 'Permission denied (Assign a new admin role without admin right)',
+        },
+      });
     return;
   }
 
-  const email = new_user_info?.linked_email?.split('@');
-  if (!email || email.length !== 2) {
+  const email = email_validator.exec(new_user_info?.linked_email);
+  if (!email || email.length !== 3) {
     res.status(400).json({
       error: {
         code: 400,
@@ -81,7 +82,7 @@ route.post('/create', required_auth(2), json(), async (req, res) => {
     return;
   }
   const username = new_user_info?.username ?? email[0];
-  const user_id = `${username}`;
+  const full_user_id = new_user_info?.organization ? `${new_user_info.organization}::${username}` : username;
   try {
     // Validate update data fields
     if (!Object.keys(new_user_info).every((key) => allowed_fields.includes(key))) {
@@ -96,7 +97,7 @@ route.post('/create', required_auth(2), json(), async (req, res) => {
     }
     const result = await User.create({
       ...new_user_info,
-      id: user_id,
+      id: full_user_id,
       username,
       created_by: req.auth.user!.id,
       updated_by: req.auth.user!.id,
@@ -157,25 +158,21 @@ route.post('/delete/:user_id', required_auth(2), async (req, res) => {
       });
       return;
     }
-    if (
-      req.auth.privilege_level! < 3 && // Require admin
-      (target_user.role?.includes('admin') || target_user.role?.includes('teacher'))
-    ) {
-      res.status(403).json({
-        error: {
-          code: 403,
-          message: 'Permission denied (Remove an admin or a teacher without admin right)',
-        },
-      });
+    if (req.auth.privilege_level! < 3) {
+      // Require admin
+      if (target_user.role?.includes('admin') || target_user.role?.includes('teacher'))
+        res.status(403).json({
+          error: {
+            code: 403,
+            message: 'Permission denied (Remove an admin or a teacher without admin right)',
+          },
+        });
       return;
     }
     await User.deleteOne({ id: user_id });
     res.json({});
   } catch (e) {
-    if (e instanceof mongoose.Error.ValidationError) {
-      const err = e;
-      res.status(400).json(err.errors);
-    } else if (e instanceof mongoose.mongo.MongoError) {
+    if (e instanceof mongoose.mongo.MongoError) {
       res.status(400).json({
         error: {
           code: 400,
@@ -187,19 +184,21 @@ route.post('/delete/:user_id', required_auth(2), async (req, res) => {
 });
 
 route.post('/update/:user_id?', required_auth(), json(), async (req, res) => {
-  const allowed_fields = ['username', 'linked_email', 'fullname', 'status'];
+  const allowed_fields = ['role', 'username', 'linked_email', 'fullname', 'status'];
   let user_id = req.params?.user_id;
-  if (user_id && req.auth.privilege_level! < 3) {
-    res.status(403).json({
-      error: {
-        code: 403,
-        message: 'Permission denied (Require admin role)',
-      },
-    });
+  const update_fields: IUser = req.body;
+  // Only admin role can update others' sensitive fields
+  if (req.auth.privilege_level! < 3) {
+    if (user_id || !!update_fields?.role || !!update_fields?.status)
+      res.status(403).json({
+        error: {
+          code: 403,
+          message: 'Permission denied (Require admin role)',
+        },
+      });
     return;
   }
   if (!user_id) user_id = req.auth.user!.id;
-  const update_fields = req.body;
   if (!update_fields) {
     res.status(400).json({
       error: {
@@ -243,7 +242,7 @@ route.post('/update/:user_id?', required_auth(), json(), async (req, res) => {
       res.status(400).json({
         error: {
           code: 400,
-          message: 'Unable to remove the specific user',
+          message: 'Unable to update user profile',
         },
       });
     } else {

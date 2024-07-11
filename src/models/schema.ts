@@ -1,5 +1,13 @@
 import { Schema } from 'mongoose';
 import db from '../dbclient';
+import { email_validator } from '../util';
+
+export interface IUser$TokenInfo {
+  token: string;
+  expiration: Date;
+  created_at: Date;
+  updated_at: Date;
+}
 
 export interface IUser {
   id: string;
@@ -14,6 +22,7 @@ export interface IUser {
   updated_at: Date;
   status: 'active' | 'disabled' | 'locked';
   organization: string;
+  refresh_tokens: IUser$TokenInfo[];
 }
 
 const UserSchema = new Schema<IUser>(
@@ -30,6 +39,7 @@ const UserSchema = new Schema<IUser>(
     username: {
       type: String,
       required: true,
+      unique: true,
     },
     linked_email: {
       type: String,
@@ -37,7 +47,7 @@ const UserSchema = new Schema<IUser>(
       unique: true,
       trim: true,
       lowercase: true,
-      match: /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,5})+$/,
+      match: email_validator,
     },
     fullname: String,
     groups: [String],
@@ -52,6 +62,27 @@ const UserSchema = new Schema<IUser>(
       type: String,
       default: '',
     },
+    refresh_tokens: [
+      new Schema<IUser$TokenInfo>(
+        {
+          token: {
+            type: String,
+            index: true,
+            required: true,
+          },
+          expiration: {
+            type: Date,
+            required: true,
+          },
+        },
+        {
+          timestamps: {
+            createdAt: 'created_at',
+            updatedAt: 'updated_at',
+          },
+        }
+      ),
+    ],
   },
   {
     timestamps: {

@@ -3,7 +3,7 @@ import config from '../config';
 import { OAuth2Client$Userinfo } from '../types';
 import { OAuth2Client } from 'google-auth-library';
 import crypto from 'crypto';
-import { pre_login_handle } from '.';
+import { pre_login_handle } from '../util';
 
 const oauth = new OAuth2Client({
   clientId: config.GOOGLE_AUTH_CLIENT_ID,
