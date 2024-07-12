@@ -46,7 +46,7 @@ app.get('/', do_auth, (req, res) => {
     res.redirect(config.APP_PATH_PREFIX + '/api/user/me');
     return;
   }
-  res.redirect(config.APP_PATH_PREFIX + '/frontent/login');
+  res.redirect(config.APP_PATH_PREFIX + '/frontend/login');
 });
 
 app.use('/api/auth', auth);
