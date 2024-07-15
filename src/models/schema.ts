@@ -9,13 +9,18 @@ export interface IUser$TokenInfo {
   updated_at: Date;
 }
 
+export interface IUser$GroupWithRoles {
+  name: string;
+  role?: string[];
+}
+
 export interface IUser {
   id: string;
   role: string[];
   username: string;
   linked_email: string;
   fullname?: string;
-  groups: string[];
+  groups: IUser$GroupWithRoles[];
   created_by?: string;
   updated_by?: string;
   create_at: Date;
@@ -23,6 +28,17 @@ export interface IUser {
   status: 'active' | 'disabled' | 'locked';
   organization: string;
   refresh_tokens: IUser$TokenInfo[];
+}
+
+export interface IGroup {
+  id: string;
+  name: string;
+  meta: Record<string, string | number>;
+  created_by?: string;
+  updated_by?: string;
+  organization: string;
+  create_at: Date;
+  updated_at: Date;
 }
 
 const UserSchema = new Schema<IUser>(
@@ -50,7 +66,18 @@ const UserSchema = new Schema<IUser>(
       match: email_validator,
     },
     fullname: String,
-    groups: [String],
+    groups: [
+      new Schema<IUser$GroupWithRoles>({
+        name: {
+          type: String,
+          required: true,
+        },
+        role: {
+          type: [String],
+          validate: (v: string) => Array.isArray(v) && v.length > 0,
+        },
+      }),
+    ],
     created_by: String,
     updated_by: String,
     status: {
@@ -93,3 +120,32 @@ const UserSchema = new Schema<IUser>(
 );
 
 export const User = db.model<IUser>('user', UserSchema);
+
+const GroupSchema = new Schema<IGroup>(
+  {
+    id: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+    name: {
+      type: String,
+      required: true,
+    },
+    meta: Schema.Types.Mixed,
+    created_by: String,
+    updated_by: String,
+    organization: {
+      type: String,
+      default: '',
+    },
+  },
+  {
+    timestamps: {
+      createdAt: 'created_at',
+      updatedAt: 'updated_at',
+    },
+  }
+);
+
+export const Group = db.model<IGroup>('group', GroupSchema);

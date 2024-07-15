@@ -100,6 +100,16 @@ export const do_auth: RequestHandler = (req, res, next) => {
 export const required_auth: (min_privilege_level?: number) => RequestHandler =
   (min_privilege_level: number = 0) =>
   (req, res, next) => {
+    if (!req.auth) {
+      console.error('Not loaded do_auth middleware (Possibly bug)');
+      res.status(500).json({
+        error: {
+          code: 500,
+          message: 'Internal Error',
+        },
+      });
+      return;
+    }
     if (!req.auth.is_auth || (min_privilege_level !== undefined && req.auth.privilege_level! < min_privilege_level)) {
       res.status(403).json({
         error: {

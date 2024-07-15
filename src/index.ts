@@ -66,9 +66,9 @@ app.use(
 
 // Fallback path
 app.use((req, res) => {
-  res.status(403).json({
+  res.status(404).json({
     error: {
-      code: 403,
+      code: 404,
       message: 'Endpoint not found',
     },
   });

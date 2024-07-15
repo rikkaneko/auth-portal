@@ -29,7 +29,13 @@ route.get('/me', required_auth(), async (req, res) => {
 });
 
 route.get('/groups', required_auth(), async (req, res) => {
-  const result = await User.findOne({ id: req.auth.user?.id }, { ...hidden_user_field, groups: 1 });
+  const result = await User.findOne(
+    { id: req.auth.user?.id },
+    {
+      'groups.name': 1,
+      'groups.role': 1,
+    }
+  );
   if (result === null) {
     res.status(404).json({
       error: {
@@ -39,7 +45,13 @@ route.get('/groups', required_auth(), async (req, res) => {
     });
     return;
   }
-  res.json(result);
+  res.json(
+    result.groups.map((v) => {
+      if (v.role && v.role.length > 0) {
+        return v;
+      } else return v.name;
+    })
+  );
 });
 
 route.get('/list/:user_id?', required_auth(2), async (req, res) => {
@@ -184,7 +196,7 @@ route.post('/delete/:user_id', required_auth(2), async (req, res) => {
 });
 
 route.post('/update/:user_id?', required_auth(), json(), async (req, res) => {
-  const allowed_fields = ['role', 'username', 'linked_email', 'fullname', 'status'];
+  const allowed_fields = ['role', 'username', 'fullname', 'status'];
   let user_id = req.params?.user_id;
   const update_fields: IUser = req.body;
   // Only admin role can update others' sensitive fields
