@@ -4,6 +4,7 @@ import 'express-async-errors';
 import config from './config';
 import auth from './auth';
 import user from './user';
+import group from './group';
 import client from './dbclient';
 import { do_auth } from './util';
 
@@ -52,6 +53,8 @@ app.get('/', do_auth, (req, res) => {
 app.use('/api/auth', auth);
 
 app.use('/api/user', user);
+
+app.use('/api/group', group);
 
 app.use(
   '/frontend',

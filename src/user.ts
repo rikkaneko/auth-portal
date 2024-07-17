@@ -1,5 +1,5 @@
 import { Router, json } from 'express';
-import { User, IUser } from './models/schema';
+import { User, IUser, IUser$GroupWithRoles, Group } from './models/schema';
 import mongoose from 'mongoose';
 import { do_auth, required_auth } from './util';
 import { email_validator } from './util';
@@ -15,43 +15,157 @@ const hidden_user_field = {
 route.use(do_auth);
 
 route.get('/me', required_auth(), async (req, res) => {
-  const result = await User.findOne({ id: req.auth.user?.id }, { ...hidden_user_field });
-  if (result === null) {
-    res.status(404).json({
-      error: {
-        code: 404,
-        message: 'Current user information is not available',
-      },
-    });
-    return;
+  try {
+    const result = await User.findOne({ id: req.auth.user?.id }, { ...hidden_user_field });
+    if (result === null) {
+      res.status(404).json({
+        error: {
+          code: 404,
+          message: 'Current user information is not available',
+        },
+      });
+      return;
+    }
+    res.json(result);
+  } catch (e) {
+    if (e instanceof mongoose.mongo.MongoError) {
+      res.status(400).json({
+        error: {
+          code: 400,
+          message: 'Unable to fetch user profile',
+        },
+      });
+    } else {
+      res.status(500).json({
+        error: {
+          code: 500,
+          message: 'Unknown error',
+        },
+      });
+      console.error(e);
+    }
   }
-  res.json(result);
 });
 
 route.get('/groups', required_auth(), async (req, res) => {
-  const result = await User.findOne(
-    { id: req.auth.user?.id },
-    {
-      'groups.name': 1,
-      'groups.role': 1,
+  try {
+    const result = await User.findOne(
+      { id: req.auth.user?.id },
+      {
+        'groups.name': 1,
+        'groups.role': 1,
+      }
+    );
+    if (result === null) {
+      res.status(404).json({
+        error: {
+          code: 404,
+          message: 'Current user information is not available',
+        },
+      });
+      return;
     }
-  );
-  if (result === null) {
-    res.status(404).json({
-      error: {
-        code: 404,
-        message: 'Current user information is not available',
-      },
-    });
-    return;
+    res.json(
+      result.groups.map((v) => {
+        if (v.role && v.role.length > 0) {
+          return v;
+        } else return v.name;
+      })
+    );
+  } catch (e) {
+    if (e instanceof mongoose.mongo.MongoError) {
+      res.status(400).json({
+        error: {
+          code: 400,
+          message: 'Unable to fetch user profile',
+        },
+      });
+    } else {
+      res.status(500).json({
+        error: {
+          code: 500,
+          message: 'Unknown error',
+        },
+      });
+      console.error(e);
+    }
   }
-  res.json(
-    result.groups.map((v) => {
-      if (v.role && v.role.length > 0) {
-        return v;
-      } else return v.name;
-    })
-  );
+});
+
+route.post('/join_group', required_auth(2), json(), async (req, res) => {
+  try {
+    const allowed_fields = ['group_name', 'role'];
+    const join_group: IUser$GroupWithRoles & { user_id: string } = req.body;
+    // Validate update data fields
+    if (!Object.keys(join_group).every((key) => allowed_fields.includes(key))) {
+      res.status(400).json({
+        error: {
+          code: 400,
+          message: 'Invalid data (Invalid data fields)',
+          allowed_fields,
+        },
+      });
+      return;
+    }
+    if (typeof join_group?.name !== 'string') {
+      res.status(400).json({
+        error: {
+          code: 400,
+          message: 'Bad Request',
+        },
+      });
+      return;
+    }
+    if ((await Group.findOne({ id: join_group.name })) === null) {
+      res.status(404).json({
+        error: {
+          code: 404,
+          message: 'Requested Group ID does not exist',
+        },
+      });
+      return;
+    }
+    const result = await User.updateOne(
+      { id: join_group?.user_id },
+      {
+        $push: {
+          groups: {
+            name: join_group?.name,
+            role: join_group?.role,
+          },
+        },
+      }
+    );
+    if (result.modifiedCount !== 1) {
+      res.status(400).json({
+        error: {
+          code: 400,
+          message: 'Unable to add user to the group',
+        },
+      });
+      return;
+    }
+    res.json({
+      join_group,
+    });
+  } catch (e) {
+    if (e instanceof mongoose.mongo.MongoError) {
+      res.status(400).json({
+        error: {
+          code: 400,
+          message: 'Unable to modify user group',
+        },
+      });
+    } else {
+      res.status(500).json({
+        error: {
+          code: 500,
+          message: 'Unknown error',
+        },
+      });
+      console.error(e);
+    }
+  }
 });
 
 route.get('/list/:user_id?', required_auth(2), async (req, res) => {
@@ -232,7 +346,7 @@ route.post('/update/:user_id?', required_auth(), json(), async (req, res) => {
       });
       return;
     }
-    await User.updateOne({ id: user_id }, update_fields);
+    await User.updateOne({ id: user_id }, { ...update_fields, updated_by: req.auth.user!.id });
     res.json({
       update: update_fields,
     });
