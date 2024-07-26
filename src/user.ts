@@ -172,7 +172,7 @@ route.get('/list/:user_id?', required_auth(2), async (req, res) => {
     req.params.user_id ? { id: req.params.user_id } : {},
     req.params.user_id ? { ...hidden_user_field } : { ...hidden_user_field, groups: 0 }
   );
-  if (result.length <= 0) {
+  if (req.params.user_id && result.length <= 0) {
     res.status(404).json({
       error: {
         code: 404,

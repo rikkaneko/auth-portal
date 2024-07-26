@@ -70,11 +70,11 @@ route.post('/create', required_auth(2), json(), async (req, res) => {
 route.get('/list/:group_id?', required_auth(), async (req, res) => {
   try {
     const result = await Group.find(req.params.group_id ? { id: req.params.group_id } : {}, { ...hidden_group_field });
-    if (result.length <= 0) {
+    if (req.params.group_id && result.length <= 0) {
       res.status(404).json({
         error: {
           code: 404,
-          message: 'Group does not exist',
+          message: 'Group ID does not exist',
         },
       });
       return;
