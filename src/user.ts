@@ -8,7 +8,6 @@ const route = Router();
 
 const hidden_user_field = {
   _id: 0,
-  groups: 0,
   refresh_tokens: 0,
 };
 
@@ -169,8 +168,11 @@ route.post('/join_group', required_auth(2), json(), async (req, res) => {
 });
 
 route.get('/list/:user_id?', required_auth(2), async (req, res) => {
-  const result = await User.find(req.params.user_id ? { id: req.params.user_id } : {}, { ...hidden_user_field });
-  if (result === null) {
+  const result = await User.find(
+    req.params.user_id ? { id: req.params.user_id } : {},
+    req.params.user_id ? { ...hidden_user_field } : { ...hidden_user_field, groups: 0 }
+  );
+  if (result.length <= 0) {
     res.status(404).json({
       error: {
         code: 404,
@@ -179,7 +181,7 @@ route.get('/list/:user_id?', required_auth(2), async (req, res) => {
     });
     return;
   }
-  res.json(result);
+  res.json(req.params.user_id ? result[0] : result);
 });
 
 route.post('/create', required_auth(2), json(), async (req, res) => {

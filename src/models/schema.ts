@@ -67,16 +67,19 @@ const UserSchema = new Schema<IUser>(
     },
     fullname: String,
     groups: [
-      new Schema<IUser$GroupWithRoles>({
-        name: {
-          type: String,
-          required: true,
+      new Schema<IUser$GroupWithRoles>(
+        {
+          name: {
+            type: String,
+            required: true,
+          },
+          role: {
+            type: [String],
+            validate: (v: string) => Array.isArray(v) && v.length > 0,
+          },
         },
-        role: {
-          type: [String],
-          validate: (v: string) => Array.isArray(v) && v.length > 0,
-        },
-      }),
+        { id: false }
+      ),
     ],
     created_by: String,
     updated_by: String,
@@ -107,6 +110,7 @@ const UserSchema = new Schema<IUser>(
             createdAt: 'created_at',
             updatedAt: 'updated_at',
           },
+          id: false,
         }
       ),
     ],
