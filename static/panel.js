@@ -2,7 +2,7 @@
 let logged_user = null;
 let user_list = null;
 // TODO
-// let group_list = null;
+let group_list = null;
 
 $(async function () {
   try {
@@ -177,8 +177,8 @@ function loadGroupsPage() {
         <table class="table" id="group-table">
           <thead>
             <tr>
+              <th>Group ID</th>
               <th>Name</th>
-              <th>Description</th>
               <th></th>
             </tr>
           </thead>
@@ -205,6 +205,7 @@ function loadGroupsPage() {
   $('#new_group_btn').on('click', function () {
     $('#newGroupModalLabel').text('New Group');
     $('#createGroup').text('Create');
+    $('#groupId').attr('disabled', false);
     $('#newGroupTabContent form')[0].reset();
     $('#groupMembersTable').empty();
     $('#newGroupModal').modal('show');
@@ -341,10 +342,11 @@ async function show_user_info_modal(user_id) {
 
     // Populate the user groups table
     $('#userGroupsTable').empty();
-    user.groups.forEach(function ({ name }) {
+    user.groups.forEach(function ({ name, role }) {
       $('#userGroupsTable').append(/* html */ `
         <tr>
           <td>${name}</td>
+          <td>${role}</td>
           <td class="text-end">
             <button class="btn btn-sm btn-danger">Remove</button>
           </td>
@@ -363,64 +365,104 @@ async function show_user_info_modal(user_id) {
   }
 }
 
-function populateGroupTable() {
+async function populateGroupTable() {
   // Populate the group table with sample data
-  const groups = [
-    { name: 'Admins', description: 'Administrative users', id: 'admin' },
-    { name: 'Managers', description: 'Management team' },
-    { name: 'Users', description: 'Regular users' },
-    { name: 'VIPs', description: 'Special users' },
-    { name: 'Guests', description: 'Temporary users' },
-  ];
+  // const groups = [
+  //   { name: 'Admins', description: 'Administrative users', id: 'admin' },
+  //   { name: 'Managers', description: 'Management team' },
+  //   { name: 'Users', description: 'Regular users' },
+  //   { name: 'VIPs', description: 'Special users' },
+  //   { name: 'Guests', description: 'Temporary users' },
+  // ];
 
-  const groupTableBody = $('#group-table tbody');
-  groups.forEach(function (group) {
-    groupTableBody.append(/* html */ `
-          <tr data-id=${group.id}>
-            <td>${group.name}</td>
-            <td>${group.description}</td>
-            <td class="text-end">
-              <button class="btn btn-sm btn-primary edit-button">Edit</button>
-              <button class="btn btn-sm btn-danger delete-button">Delete</button>
-            </td>
-          </tr>
-        `);
-  });
+  try {
+    const res = await fetch('../api/group/list');
+    if (!res.ok) {
+      const error_info = await res.json();
+      alert(error_info.error.message);
+      return;
+    }
+    group_list = await res.json();
+    const groupTableBody = $('#group-table tbody');
+    group_list.forEach(function ({ id, name }) {
+      groupTableBody.append(/* html */ `
+      <tr data-id=${id}>
+        <td>${id}</td>
+        <td>${name}</td>
+        <td class="text-end">
+          <button class="btn btn-sm btn-primary edit-button">Edit</button>
+          <button class="btn btn-sm btn-danger delete-button">Delete</button>
+        </td>
+      </tr>
+    `);
+    });
 
-  // Edit Group button click event handler
-  $('#group-table td .edit-button').on('click', function () {
-    const group_id = $(this).closest('tr').data('id');
-    // Fetch the current group's information from the backend or database
-    var currentGroup = {
-      id: group_id,
-      name: 'Group 1',
-      valid_years: '2023/24',
-      members: ['user1', 'user2', 'user3'],
-    };
+    // Edit Group button click event handler
+    $('#group-table td .edit-button').on('click', async function () {
+      const group_id = $(this).closest('tr').data('id');
+      // Fetch the current group's information from the backend or database
+      // var currentGroup = {
+      //   id: group_id,
+      //   name: 'Group 1',
+      //   valid_years: '2023/24',
+      //   members: ['user1', 'user2', 'user3'],
+      // };
 
-    // Populate the form fields with the current group's information
-    $('#groupId').val(currentGroup.id);
-    $('#groupName').val(currentGroup.name);
-    $('#validYears').val(currentGroup.valid_years);
-    $('#groupAdmin').val(currentGroup.status);
+      try {
+        // Retrieve group information
+        const res1 = await fetch(`../api/group/list/${group_id}`);
+        if (!res1.ok) {
+          const error_info = await res1.json();
+          alert(error_info.error.message);
+          return;
+        }
+        // Retrieve group memeber list
+        const res2 = await fetch(`../api/group/list_members/${group_id}`);
+        if (!res2.ok) {
+          const error_info = await res2.json();
+          alert(error_info.error.message);
+          return;
+        }
+        const group_info = await res1.json();
+        const group_memeber_list = await res2.json();
+        // Populate the form fields with the current group's information
+        $('#groupId').val(group_info.id);
+        $('#groupId').attr('disabled', true);
+        $('#groupName').val(group_info.name);
 
-    // Populate the group members table
-    $('#groupMembersTable').empty();
-    currentGroup.members.forEach(function (member) {
-      $('#groupMembersTable').append(/* html */ `
+        const admin_list = [];
+        // Populate the group members table
+        $('#groupMembersTable').empty();
+        group_memeber_list.forEach(function ({ user_id, role }) {
+          if (role.includes('admin')) admin_list.push(user_id);
+          $('#groupMembersTable').append(/* html */ `
             <tr>
-              <td>${member}</td>
+              <td>${user_id}</td>
+              <td>${role[0]}</td>
               <td class="text-end">
                 <button class="btn btn-sm btn-danger">Remove</button>
               </td>
             </tr>
           `);
-    });
+        });
+        $('#groupAdmin').val(admin_list.toString());
 
-    $('#newGroupModalLabel').text('Update Group');
-    $('#createGroup').text('Save');
-    $('#newGroupModal').modal('show');
-  });
+        $('#newGroupModalLabel').text('Update Group');
+        $('#createGroup').text('Save');
+        $('#newGroupModal').modal('show');
+      } catch (e) {
+        if (e instanceof Error) {
+          console.error(e.message);
+          alert(e.message);
+        }
+      }
+    });
+  } catch (e) {
+    if (e instanceof Error) {
+      console.error(e.message);
+      alert(e.message);
+    }
+  }
 }
 
 function filterUserTable() {

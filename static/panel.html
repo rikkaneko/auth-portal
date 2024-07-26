@@ -84,11 +84,7 @@
                   <div class="mb-2">
                     <label for="groupName" class="form-label">Group Name</label>
                     <input type="text" class="form-control" id="groupName" placeholder="Enter group name">
-                  </div>
-                  <div class="mb-2">
-                    <label for="validYears" class="form-label">Valid Years</label>
-                    <input type="number" class="form-control" id="validYears" placeholder="Enter valid years">
-                  </div>
+                  </div>  
                   <div class="mb-2">
                     <label for="groupAdmin" class="form-label">Group Admin</label>
                     <input type="text" class="form-control" id="groupAdmin" placeholder="Enter group admin ID">
@@ -99,7 +95,12 @@
                 <div class="mb-2">
                   <label for="userInput" class="form-label">Search User</label>
                   <div class="input-group">
-                    <input type="text" class="form-control" id="userInput" placeholder="Enter user ID">
+                    <input type="text" class="form-control w-50" id="userInput" placeholder="Enter user ID">
+                    <select class="form-select" id="addUserRoleInput">
+                      <option value="student">Student</option>
+                      <option value="teacher">Teacher</option>
+                      <option value="admin">Admin</option>
+                    </select>
                     <button class="btn btn-primary" id="addUserToGroup">Add User</button>
                   </div>
                 </div>
@@ -116,6 +117,7 @@
                   <thead>
                     <tr>
                       <th>User</th>
+                      <th>role</th>
                       <th></th>
                     </tr>
                   </thead>
@@ -192,7 +194,12 @@
                 <div class="mb-3">
                   <label for="groupInput" class="form-label">Search Group</label>
                   <div class="input-group">
-                    <input type="text" class="form-control" id="groupInput" placeholder="Enter group ID">
+                    <input type="text" class="form-control w-50" id="groupInput" placeholder="Enter group ID">
+                    <select class="form-select" id="joinGroupRoleInput">
+                      <option value="student">Student</option>
+                      <option value="teacher">Teacher</option>
+                      <option value="admin">Admin</option>
+                    </select>
                     <button class="btn btn-primary" id="addUserToGroup">Add Group</button>
                   </div>
                 </div>
@@ -202,6 +209,7 @@
                   <thead>
                     <tr>
                       <th>Group</th>
+                      <th>Role</th>
                       <th></th>
                     </tr>
                   </thead>

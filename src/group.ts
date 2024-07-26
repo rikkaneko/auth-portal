@@ -1,5 +1,5 @@
 import { Router, json } from 'express';
-import { Group, IGroup, IUser$GroupWithRoles } from './models/schema';
+import { Group, IGroup, User } from './models/schema';
 import mongoose from 'mongoose';
 import { do_auth, required_auth } from './util';
 
@@ -68,17 +68,68 @@ route.post('/create', required_auth(2), json(), async (req, res) => {
 });
 
 route.get('/list/:group_id?', required_auth(), async (req, res) => {
-  const result = await Group.find(req.params.group_id ? { id: req.params.group_id } : {}, { ...hidden_group_field });
-  if (result === null) {
-    res.status(404).json({
-      error: {
-        code: 404,
-        message: 'Group does not exist',
-      },
-    });
-    return;
+  try {
+    const result = await Group.find(req.params.group_id ? { id: req.params.group_id } : {}, { ...hidden_group_field });
+    if (result.length <= 0) {
+      res.status(404).json({
+        error: {
+          code: 404,
+          message: 'Group does not exist',
+        },
+      });
+      return;
+    }
+    res.json(req.params.group_id ? result[0] : result);
+  } catch (e) {
+    if (e instanceof mongoose.mongo.MongoError) {
+      res.status(400).json({
+        error: {
+          code: 400,
+          message: e.message,
+        },
+      });
+    } else {
+      res.status(500).json({
+        error: {
+          code: 500,
+          message: 'Unknown error',
+        },
+      });
+      console.error(e);
+    }
   }
-  res.json(result);
+});
+
+route.get('/list_members/:group_id', required_auth(), async (req, res) => {
+  try {
+    const group_id = req.params.group_id;
+    const result = await User.find({ groups: { $elemMatch: { name: group_id } } }, { id: 1, 'groups.$': 1 });
+    res.json(
+      result.map((user) => {
+        return {
+          user_id: user.id,
+          role: user.groups[0].role,
+        };
+      })
+    );
+  } catch (e) {
+    if (e instanceof mongoose.mongo.MongoError) {
+      res.status(400).json({
+        error: {
+          code: 400,
+          message: e.message,
+        },
+      });
+    } else {
+      res.status(500).json({
+        error: {
+          code: 500,
+          message: 'Unknown error',
+        },
+      });
+      console.error(e);
+    }
+  }
 });
 
 export default route;
