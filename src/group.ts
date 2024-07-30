@@ -69,7 +69,10 @@ route.post('/create', required_auth(2), json(), async (req, res) => {
 
 route.get('/list/:group_id?', required_auth(), async (req, res) => {
   try {
-    const result = await Group.find(req.params.group_id ? { id: req.params.group_id } : {}, { ...hidden_group_field });
+    const result = await Group.find(
+      req.params.group_id ? { id: req.params.group_id } : {},
+      req.params.group_id ? { ...hidden_group_field } : { ...hidden_group_field, groups: 0 }
+    );
     if (req.params.group_id && result.length <= 0) {
       res.status(404).json({
         error: {
@@ -103,7 +106,7 @@ route.get('/list/:group_id?', required_auth(), async (req, res) => {
 route.get('/list_members/:group_id', required_auth(), async (req, res) => {
   try {
     const group_id = req.params.group_id;
-    const result = await User.find({ groups: { $elemMatch: { name: group_id } } }, { id: 1, 'groups.$': 1 });
+    const result = await User.find({ groups: { $elemMatch: { id: group_id } } }, { id: 1, 'groups.$': 1 });
     res.json(
       result.map((user) => {
         return {

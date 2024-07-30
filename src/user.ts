@@ -68,7 +68,7 @@ route.get('/groups', required_auth(), async (req, res) => {
       result.groups.map((v) => {
         if (v.role && v.role.length > 0) {
           return v;
-        } else return v.name;
+        } else return v.id;
       })
     );
   } catch (e) {
@@ -93,7 +93,7 @@ route.get('/groups', required_auth(), async (req, res) => {
 
 route.post('/join_group', required_auth(2), json(), async (req, res) => {
   try {
-    const allowed_fields = ['group_name', 'role'];
+    const allowed_fields = ['group_name', 'role', 'user_id'];
     const join_group: IUser$GroupWithRoles & { user_id: string } = req.body;
     // Validate update data fields
     if (!Object.keys(join_group).every((key) => allowed_fields.includes(key))) {
@@ -106,7 +106,7 @@ route.post('/join_group', required_auth(2), json(), async (req, res) => {
       });
       return;
     }
-    if (typeof join_group?.name !== 'string') {
+    if (!join_group.id || !join_group.role) {
       res.status(400).json({
         error: {
           code: 400,
@@ -115,7 +115,7 @@ route.post('/join_group', required_auth(2), json(), async (req, res) => {
       });
       return;
     }
-    if ((await Group.findOne({ id: join_group.name })) === null) {
+    if ((await Group.findOne({ id: join_group.id })) === null) {
       res.status(404).json({
         error: {
           code: 404,
@@ -124,25 +124,25 @@ route.post('/join_group', required_auth(2), json(), async (req, res) => {
       });
       return;
     }
-    const result = await User.updateOne(
-      { id: join_group?.user_id },
-      {
-        $push: {
-          groups: {
-            name: join_group?.name,
-            role: join_group?.role,
+    const target_user_id = join_group.user_id ? join_group.user_id : req.auth.user?.id;
+    const existing_group = await User.findOne({ id: target_user_id, 'groups.id': join_group.id });
+    if (existing_group) {
+      await User.updateOne(
+        { id: target_user_id, 'groups.id': join_group.id },
+        { $set: { 'groups.$.role': join_group.role } }
+      );
+    } else {
+      await User.updateOne(
+        { id: target_user_id },
+        {
+          $push: {
+            groups: {
+              name: join_group?.id,
+              role: join_group?.role,
+            },
           },
-        },
-      }
-    );
-    if (result.modifiedCount !== 1) {
-      res.status(400).json({
-        error: {
-          code: 400,
-          message: 'Unable to add user to the group',
-        },
-      });
-      return;
+        }
+      );
     }
     res.json({
       join_group,

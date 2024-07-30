@@ -18,6 +18,9 @@ export const pre_login_handle: RequestHandler = (req, _, next) => {
     if (req.query?.refresh_token === '1') {
       req.session.need_refresh_token = true;
     }
+    if (req.query?.panel === '1') {
+      req.session.panel = true;
+    }
     next();
   });
 };

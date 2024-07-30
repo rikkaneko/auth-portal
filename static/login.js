@@ -1,14 +1,23 @@
 $(function () {
-  function goto_with_query(url) {
-    const search = window.location.search;
-    window.open(`${url}${search}`, '_self');
+  const params = new URLSearchParams(window.location.search);
+
+  if (params.get('refresh_token') === '1') {
+    $('#remember_me_checkbox').attr('checked', true);
   }
 
+  $('#remember_me_checkbox').on('click', function () {
+    if (this.checked) {
+      params.set('refresh_token', '1');
+    } else {
+      params.delete('refresh_token');
+    }
+  });
+
   $('#ms_login_btn').on('click', function () {
-    goto_with_query('../api/auth/microsoft');
+    window.open(`../api/auth/microsoft?${params}`, '_self');
   });
 
   $('#google_login_btn').on('click', function () {
-    goto_with_query('../api/auth/google');
+    window.open(`../api/auth/google?${params}`, '_self');
   });
 });

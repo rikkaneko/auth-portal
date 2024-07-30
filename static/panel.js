@@ -12,7 +12,7 @@ $(async function () {
       window.open(
         '../frontend/login?' +
           new URLSearchParams({
-            redirect_url: location.href,
+            panel: 1,
           }),
         '_self'
       );
@@ -59,7 +59,7 @@ $(async function () {
       window.open(
         '../frontend/login?' +
           new URLSearchParams({
-            redirect_url: location.href,
+            panel: 1,
           }),
         '_self'
       );
@@ -342,10 +342,10 @@ async function show_user_info_modal(user_id) {
 
     // Populate the user groups table
     $('#userGroupsTable').empty();
-    user.groups.forEach(function ({ name, role }) {
+    user.groups.forEach(function ({ id, role }) {
       $('#userGroupsTable').append(/* html */ `
         <tr>
-          <td>${name}</td>
+          <td>${id}</td>
           <td>${role}</td>
           <td class="text-end">
             <button class="btn btn-sm btn-danger">Remove</button>

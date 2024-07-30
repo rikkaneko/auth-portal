@@ -7,6 +7,7 @@ import { User } from './models/schema';
 import config from './config';
 import { AuthResponse } from './types';
 import { do_auth, get_token, required_auth, sign_token } from './util';
+import mongoose from 'mongoose';
 
 const route = Router();
 
@@ -66,12 +67,6 @@ route.get('/token', async (req, res) => {
       return;
     }
     const signed_token = sign_token(user);
-    res.cookie('id_token', signed_token, {
-      httpOnly: false,
-      // sameSite: 'none',
-      domain: config.APP_DOMAIN,
-      maxAge: 14400000,
-    });
     const auth_response: AuthResponse = {
       auth_token: signed_token,
     };
@@ -89,10 +84,12 @@ route.get('/token', async (req, res) => {
           },
         }
       );
+      // Append the refresh token to the response
       auth_response.refresh_token = refresh_token;
       auth_response.expiration = expiration.getTime();
     }
     const redirect_url = req.session.redirect_url;
+    const to_panel = req.session.panel;
     // Invalidate old session
     req.session.destroy(() => {
       if (redirect_url) {
@@ -101,18 +98,45 @@ route.get('/token', async (req, res) => {
             Object.fromEntries(Object.entries(auth_response).map(([k, v]) => [k, v.toString()]))
           )}`
         );
+      } else if (to_panel) {
+        // Set access token
+        res.cookie('id_token', signed_token, {
+          httpOnly: true,
+          // sameSite: 'none',
+          domain: config.APP_DOMAIN,
+          maxAge: 14400000,
+        });
+        if (auth_response.refresh_token) {
+          // Set access token
+          res.cookie('id_refresh_token', auth_response.refresh_token, {
+            httpOnly: true,
+            // sameSite: 'none',
+            domain: config.APP_DOMAIN,
+            expires: new Date(auth_response.expiration!),
+          });
+        }
+        res.redirect(config.APP_PATH_PREFIX + '/frontend/panel');
       } else {
         res.json(auth_response);
       }
     });
   } catch (e) {
-    res.status(500).json({
-      error: {
-        code: 500,
-        message: 'Internal error',
-      },
-    });
-    console.error(e);
+    if (e instanceof mongoose.mongo.MongoError && e.code) {
+      res.status(400).json({
+        error: {
+          code: 400,
+          message: e.message,
+        },
+      });
+    } else {
+      res.status(500).json({
+        error: {
+          code: 500,
+          message: 'Internal error',
+        },
+      });
+      console.error(e);
+    }
   }
 });
 
@@ -151,7 +175,7 @@ route.post('/token', async (req, res) => {
     }
     const signed_token = sign_token(user);
     res.cookie('id_token', signed_token, {
-      httpOnly: false,
+      httpOnly: true,
       // sameSite: 'none',
       domain: config.APP_DOMAIN,
       maxAge: 14400000,

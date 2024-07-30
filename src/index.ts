@@ -20,7 +20,7 @@ app.use(
     secret: config.SESSION_SECRET_KEY,
     name: 'sessionId',
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
     cookie: {
       httpOnly: true,
       maxAge: 5 * 60 * 1000, // 5 min

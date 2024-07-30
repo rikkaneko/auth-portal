@@ -10,7 +10,7 @@ export interface IUser$TokenInfo {
 }
 
 export interface IUser$GroupWithRoles {
-  name: string;
+  id: string;
   role?: string[];
 }
 
@@ -69,7 +69,7 @@ const UserSchema = new Schema<IUser>(
     groups: [
       new Schema<IUser$GroupWithRoles>(
         {
-          name: {
+          id: {
             type: String,
             required: true,
           },
