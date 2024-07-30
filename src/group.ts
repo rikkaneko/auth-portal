@@ -45,7 +45,8 @@ route.post('/create', required_auth(2), json(), async (req, res) => {
       res.status(400).json({
         error: {
           code: 400,
-          errors,
+          message: 'Field validation error',
+          fields: errors,
         },
       });
     } else if (e instanceof mongoose.mongo.MongoError && e.code === 11000) {

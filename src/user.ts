@@ -93,7 +93,7 @@ route.get('/groups', required_auth(), async (req, res) => {
 
 route.post('/join_group', required_auth(2), json(), async (req, res) => {
   try {
-    const allowed_fields = ['group_name', 'role', 'user_id'];
+    const allowed_fields = ['id', 'role', 'user_id'];
     const join_group: IUser$GroupWithRoles & { user_id: string } = req.body;
     // Validate update data fields
     if (!Object.keys(join_group).every((key) => allowed_fields.includes(key))) {
@@ -137,7 +137,7 @@ route.post('/join_group', required_auth(2), json(), async (req, res) => {
         {
           $push: {
             groups: {
-              name: join_group?.id,
+              id: join_group?.id,
               role: join_group?.role,
             },
           },
@@ -146,6 +146,55 @@ route.post('/join_group', required_auth(2), json(), async (req, res) => {
     }
     res.json({
       join_group,
+    });
+  } catch (e) {
+    if (e instanceof mongoose.mongo.MongoError) {
+      res.status(400).json({
+        error: {
+          code: 400,
+          message: 'Unable to modify user group',
+        },
+      });
+    } else {
+      res.status(500).json({
+        error: {
+          code: 500,
+          message: 'Unknown error',
+        },
+      });
+      console.error(e);
+    }
+  }
+});
+
+route.post('/leave_group', required_auth(2), json(), async (req, res) => {
+  try {
+    const allowed_fields = ['id', 'user_id'];
+    const leave_group: { user_id: string; id: string } = req.body;
+    // Validate update data fields
+    if (!Object.keys(leave_group).every((key) => allowed_fields.includes(key))) {
+      res.status(400).json({
+        error: {
+          code: 400,
+          message: 'Invalid data (Invalid data fields)',
+          allowed_fields,
+        },
+      });
+      return;
+    }
+    if (!leave_group.id) {
+      res.status(400).json({
+        error: {
+          code: 400,
+          message: 'Bad Request',
+        },
+      });
+      return;
+    }
+    const target_user_id = leave_group.user_id ? leave_group.user_id : req.auth.user?.id;
+    await User.updateOne({ id: target_user_id }, { $pull: { groups: { id: leave_group.id } } });
+    res.json({
+      leave_group,
     });
   } catch (e) {
     if (e instanceof mongoose.mongo.MongoError) {
@@ -199,6 +248,16 @@ route.post('/create', required_auth(2), json(), async (req, res) => {
     return;
   }
 
+  if (!new_user_info?.linked_email) {
+    res.status(400).json({
+      error: {
+        code: 400,
+        message: 'Field linked_email is required',
+      },
+    });
+    return;
+  }
+
   const email = email_validator.exec(new_user_info?.linked_email);
   if (!email || email.length !== 3) {
     res.status(400).json({
@@ -244,7 +303,8 @@ route.post('/create', required_auth(2), json(), async (req, res) => {
       res.status(400).json({
         error: {
           code: 400,
-          errors,
+          message: 'Field validation error',
+          fields: errors,
         },
       });
     } else if (e instanceof mongoose.mongo.MongoError && e.code === 11000) {
@@ -363,7 +423,8 @@ route.post('/update/:user_id?', required_auth(), json(), async (req, res) => {
       res.status(400).json({
         error: {
           code: 400,
-          errors,
+          message: 'Field validation error',
+          fields: errors,
         },
       });
     } else if (e instanceof mongoose.mongo.MongoError) {

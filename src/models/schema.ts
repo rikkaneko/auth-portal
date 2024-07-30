@@ -78,7 +78,7 @@ const UserSchema = new Schema<IUser>(
             validate: (v: string) => Array.isArray(v) && v.length > 0,
           },
         },
-        { id: false }
+        { _id: false }
       ),
     ],
     created_by: String,
@@ -110,7 +110,7 @@ const UserSchema = new Schema<IUser>(
             createdAt: 'created_at',
             updatedAt: 'updated_at',
           },
-          id: false,
+          _id: false,
         }
       ),
     ],

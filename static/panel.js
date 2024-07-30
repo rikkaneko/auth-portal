@@ -1,7 +1,6 @@
 // Shared variable
 let logged_user = null;
 let user_list = null;
-// TODO
 let group_list = null;
 
 $(async function () {
@@ -67,6 +66,186 @@ $(async function () {
       if (e instanceof Error) console.error(e.message);
     }
   });
+
+  // Setup event handler for User Modal
+  // Create User button click event handler
+  $('#createUser').on('click', async function () {
+    // Get the user information from the form
+    const username = $('#username').val() || undefined;
+    const fullname = $('#fullname').val() || undefined;
+    const email = $('#email').val();
+    const status = $('#status').val();
+    const role = $('#role').val();
+
+    if (!$('#newUserTabContent form')[0].checkValidity()) {
+      alert('Email is required field');
+      return;
+    }
+
+    // Get the user groups
+    const user_group = $('#userGroupsTable').data('new_group_list');
+
+    try {
+      const mode = $('#createUser').data('mode');
+      if (mode === 'new') {
+        const res1 = await fetch('../api/user/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            username,
+            linked_email: email,
+            fullname,
+            status,
+            role,
+          }),
+        });
+        if (!res1.ok) {
+          const error_info = await res1.json();
+          alert(error_info.error.message);
+          if (error_info.error.fields) {
+            let valid_result = '';
+            for (const [key, value] of Object.entries(error_info.error.fields)) {
+              valid_result += `${key}: ${value}\n`;
+            }
+            alert(valid_result);
+          }
+          return;
+        }
+        const new_user = await res1.json();
+        if (user_group) {
+          for (const [_, new_group] of user_group) {
+            const res = await fetch('../api/user/join_group', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                id: new_group.id,
+                role: new_group.role,
+                user_id: new_user.id,
+              }),
+            });
+            if (!res.ok) {
+              const error_info = await res.json();
+              alert(error_info.error.message);
+              return;
+            }
+          }
+        }
+        // Close the modal
+        $('#newUserModal').modal('hide');
+      }
+    } catch (e) {
+      if (e instanceof Error) {
+        console.error(e.message);
+        alert(e.message);
+      }
+    }
+  });
+
+  // Add Group button click event handler
+  $('#addGroupToUser').on('click', function () {
+    const groupId = $('#groupInput').val();
+    const role = $('#joinGroupRoleInput').val();
+    if (groupId) {
+      $('#userGroupsTable').prepend(/* html */ `
+            <tr class='newly-added-item' data-id=${groupId}>
+              <td>${groupId}</td>
+              <td>${role}</td>
+              <td class='text-end'>
+                <button class="btn btn-sm btn-danger">Remove</button>
+              </td>
+            </tr>
+          `);
+      $('#groupInput').val('');
+      const new_group = { id: groupId, role: [role] };
+      const new_group_list = $('#userGroupsTable').data('new_group_list');
+      if (new_group_list) {
+        new_group_list.set(new_group.id, new_group);
+      } else {
+        $('#userGroupsTable').data('new_group_list', new Map([[new_group.id, new_group]]));
+      }
+    }
+  });
+
+  // Remove User Group button click event handler
+  $('#userGroupsTable').on('click', '.btn-danger', function () {
+    const row = $(this).closest('tr');
+    const id = row.data('id');
+    if (row.hasClass('newly-added-item')) {
+      const new_group_list = $('#userGroupsTable').data('new_group_list');
+      new_group_list.delete(id);
+    } else {
+      const leave_group_list = $('#userGroupsTable').data('leave_group_list');
+      if (leave_group_list) {
+        leave_group_list.push(id);
+      } else {
+        $('#userGroupsTable').data('leave_group_list', [id]);
+      }
+    }
+    row.remove();
+  });
+
+  // Setup event handler for Group Modal
+  // Create Group button click event handler
+  $('#createGroup').on('click', function () {
+    // Get the group information from the form
+    const groupId = $('#groupId').val();
+    const groupName = $('#groupName').val();
+    const validYears = $('#validYears').val();
+    const groupAdmin = $('#groupAdmin').val();
+
+    // Get the group members
+    const groupMembers = [];
+    $('#groupMembersTable tr').each(function () {
+      groupMembers.push($(this).find('td:first-child').text());
+    });
+
+    // Perform the necessary actions to create the new group
+    console.log('Group Information:');
+    console.log('Group ID:', groupId);
+    console.log('Group Name:', groupName);
+    console.log('Valid Years:', validYears);
+    console.log('Group Admin:', groupAdmin);
+    console.log('Group Members:', groupMembers);
+
+    // Close the modal
+    $('#newGroupModal').modal('hide');
+  });
+
+  // Add User button click event handler
+  $('#addUserToGroup').on('click', function () {
+    const userId = $('#userInput').val();
+    const role = $('#addUserRoleInput').val();
+    if (userId) {
+      $('#groupMembersTable').prepend(/* html */ `
+            <tr>
+              <td>${userId}</td>
+              <td>${role}</td>
+              <td class='text-end'>
+                <button class="btn btn-sm btn-danger">Remove</button>
+              </td>
+            </tr>
+          `);
+      $('#userInput').val('');
+    }
+  });
+
+  // Remove Group Member button click event handler
+  $('#groupMembersTable').on('click', '.btn-danger', function () {
+    $(this).closest('tr').remove();
+  });
+
+  // Import Members button click event handler
+  $('#importMembers').on('click', function () {
+    const csvFile = $('#csvFile')[0].files[0];
+    if (csvFile) {
+      // Handle the CSV file upload and import members
+      console.log('Importing members from CSV:', csvFile.name);
+    }
+  });
 });
 
 function loadUsersPage() {
@@ -109,60 +288,13 @@ function loadUsersPage() {
   $('#new_user_btn').on('click', function () {
     $('#newUserModalLabel').text('New User');
     $('#createUser').text('Create');
+    $('#createUser').data('mode', 'new');
     $('#newUserTabContent form')[0].reset();
     $('#userGroupsTable').empty();
     $('#userID').closest('div').attr('hidden', true);
     $('#email').attr('disabled', false);
+    $('#newUserModal').data('selected_user_info', null);
     $('#newUserModal').modal('show');
-  });
-
-  // Create User button click event handler
-  $('#createUser').on('click', function () {
-    // Get the user information from the form
-    const username = $('#username').val();
-    const fullname = $('#fullname').val();
-    const email = $('#email').val();
-    const status = $('#status').val();
-    const role = $('#role').val();
-
-    // Get the user groups
-    const userGroups = [];
-    $('#userGroupsTable tbody tr').each(function () {
-      userGroups.push($(this).find('td:first-child').text());
-    });
-
-    // Perform the necessary actions to create the new user
-    console.log('User Information:');
-    console.log('Username:', username);
-    console.log('Full Name:', fullname);
-    console.log('Email:', email);
-    console.log('Status:', status);
-    console.log('Role:', role);
-    console.log('User Groups:', userGroups);
-
-    // Close the modal
-    $('#newUserModal').modal('hide');
-  });
-
-  // Add Group button click event handler
-  $('#addUserToGroup').on('click', function () {
-    const groupId = $('#groupInput').val();
-    if (groupId) {
-      $('#userGroupsTable tbody').append(/* html */ `
-            <tr>
-              <td>${groupId}</td>
-              <td>
-                <button class="btn btn-sm btn-danger">Remove</button>
-              </td>
-            </tr>
-          `);
-      $('#groupInput').val('');
-    }
-  });
-
-  // Remove User Group button click event handler
-  $('#userGroupsTable').on('click', '.btn-danger', function () {
-    $(this).closest('tr').remove();
   });
 }
 
@@ -205,78 +337,16 @@ function loadGroupsPage() {
   $('#new_group_btn').on('click', function () {
     $('#newGroupModalLabel').text('New Group');
     $('#createGroup').text('Create');
+    $('#createGroup').data('mode', 'new');
     $('#groupId').attr('disabled', false);
     $('#newGroupTabContent form')[0].reset();
     $('#groupMembersTable').empty();
+    $('#newGroupModal').data('selected_group_info', null);
     $('#newGroupModal').modal('show');
-  });
-
-  // Create Group button click event handler
-  $('#createGroup').on('click', function () {
-    // Get the group information from the form
-    const groupId = $('#groupId').val();
-    const groupName = $('#groupName').val();
-    const validYears = $('#validYears').val();
-    const groupAdmin = $('#groupAdmin').val();
-
-    // Get the group members
-    const groupMembers = [];
-    $('#groupMembersTable tbody tr').each(function () {
-      groupMembers.push($(this).find('td:first-child').text());
-    });
-
-    // Perform the necessary actions to create the new group
-    console.log('Group Information:');
-    console.log('Group ID:', groupId);
-    console.log('Group Name:', groupName);
-    console.log('Valid Years:', validYears);
-    console.log('Group Admin:', groupAdmin);
-    console.log('Group Members:', groupMembers);
-
-    // Close the modal
-    $('#newGroupModal').modal('hide');
-  });
-
-  // Add User button click event handler
-  $('#addUserToGroup').on('click', function () {
-    const userId = $('#userInput').val();
-    if (userId) {
-      $('#groupMembersTable tbody').append(/* html */ `
-            <tr>
-              <td>${userId}</td>
-              <td>
-                <button class="btn btn-sm btn-danger">Remove</button>
-              </td>
-            </tr>
-          `);
-      $('#userInput').val('');
-    }
-  });
-
-  // Remove Group Member button click event handler
-  $('#groupMembersTable').on('click', '.btn-danger', function () {
-    $(this).closest('tr').remove();
-  });
-
-  // Import Members button click event handler
-  $('#importMembers').on('click', function () {
-    const csvFile = $('#csvFile')[0].files[0];
-    if (csvFile) {
-      // Handle the CSV file upload and import members
-      console.log('Importing members from CSV:', csvFile.name);
-    }
   });
 }
 
 async function populateUserTable() {
-  // Populate the user table with sample data
-  // const users = [
-  //   { name: 'John Doe', email: 'john.doe@example.com', id: 'john.doe' },
-  //   { name: 'Jane Smith', email: 'jane.smith@example.com' },
-  //   { name: 'Bob Johnson', email: 'bob.johnson@example.com' },
-  //   { name: 'Alice Williams', email: 'alice.williams@example.com' },
-  //   { name: 'Tom Davis', email: 'tom.davis@example.com' },
-  // ];
   try {
     const res = await fetch('../api/user/list');
     if (!res.ok) {
@@ -312,16 +382,6 @@ async function populateUserTable() {
 }
 
 async function show_user_info_modal(user_id) {
-  // Fetch the current user's information from the backend or database
-  // const currentUser = {
-  //   id: user_id,
-  //   username: 'johndoe',
-  //   fullname: 'John Doe',
-  //   email: 'johndoe@example.com',
-  //   status: 'active',
-  //   role: 'admin',
-  //   groups: ['group1', 'group2', 'group3'],
-  // };
   try {
     const res = await fetch(`../api/user/list/${user_id}`);
     if (!res.ok) {
@@ -330,6 +390,8 @@ async function show_user_info_modal(user_id) {
       return;
     }
     const user = await res.json();
+    // Cache selected user
+    $('#newUserModal').data('selected_user_info', user);
     // Populate the form fields with the current user's information
     $('#userID').val(user.id);
     $('#userID').closest('div').attr('hidden', false);
@@ -344,7 +406,7 @@ async function show_user_info_modal(user_id) {
     $('#userGroupsTable').empty();
     user.groups.forEach(function ({ id, role }) {
       $('#userGroupsTable').append(/* html */ `
-        <tr>
+        <tr data-id=${id}>
           <td>${id}</td>
           <td>${role}</td>
           <td class="text-end">
@@ -356,6 +418,12 @@ async function show_user_info_modal(user_id) {
 
     $('#newUserModalLabel').text('Update User');
     $('#createUser').text('Save');
+    $('#createUser').data('mode', 'update');
+
+    // Reset modified group list
+    $('#userGroupsTable').data('new_group_list', null);
+    $('#userGroupsTable').data('leave_group_list', null);
+
     $('#newUserModal').modal('show');
   } catch (e) {
     if (e instanceof Error) {
@@ -366,15 +434,6 @@ async function show_user_info_modal(user_id) {
 }
 
 async function populateGroupTable() {
-  // Populate the group table with sample data
-  // const groups = [
-  //   { name: 'Admins', description: 'Administrative users', id: 'admin' },
-  //   { name: 'Managers', description: 'Management team' },
-  //   { name: 'Users', description: 'Regular users' },
-  //   { name: 'VIPs', description: 'Special users' },
-  //   { name: 'Guests', description: 'Temporary users' },
-  // ];
-
   try {
     const res = await fetch('../api/group/list');
     if (!res.ok) {
@@ -400,14 +459,6 @@ async function populateGroupTable() {
     // Edit Group button click event handler
     $('#group-table td .edit-button').on('click', async function () {
       const group_id = $(this).closest('tr').data('id');
-      // Fetch the current group's information from the backend or database
-      // var currentGroup = {
-      //   id: group_id,
-      //   name: 'Group 1',
-      //   valid_years: '2023/24',
-      //   members: ['user1', 'user2', 'user3'],
-      // };
-
       try {
         // Retrieve group information
         const res1 = await fetch(`../api/group/list/${group_id}`);
@@ -425,6 +476,8 @@ async function populateGroupTable() {
         }
         const group_info = await res1.json();
         const group_memeber_list = await res2.json();
+        // Cache selected group
+        $('#newGroupModal').data('selected_group_info', { ...group_info, members: group_memeber_list });
         // Populate the form fields with the current group's information
         $('#groupId').val(group_info.id);
         $('#groupId').attr('disabled', true);
@@ -436,7 +489,7 @@ async function populateGroupTable() {
         group_memeber_list.forEach(function ({ user_id, role }) {
           if (role.includes('admin')) admin_list.push(user_id);
           $('#groupMembersTable').append(/* html */ `
-            <tr>
+            <tr data-id=${user_id}>
               <td>${user_id}</td>
               <td>${role[0]}</td>
               <td class="text-end">
@@ -449,6 +502,7 @@ async function populateGroupTable() {
 
         $('#newGroupModalLabel').text('Update Group');
         $('#createGroup').text('Save');
+        $('#createGroup').data('mode', 'update');
         $('#newGroupModal').modal('show');
       } catch (e) {
         if (e instanceof Error) {
