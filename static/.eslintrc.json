@@ -6,8 +6,15 @@
     "browser": true,
     "jquery": true
   },
+  "plugins": ["plugin"],
+  "settings": {
+    "import/resolver": {
+      "node": true
+    }
+  },
   "rules": {
-    "@typescript-eslint/no-unused-vars": "off"
+    "@typescript-eslint/no-unused-vars": "off",
+    "@typescript-eslint/triple-slash-reference": "off"
   },
   "globals": {
     "$": true

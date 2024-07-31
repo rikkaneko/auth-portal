@@ -1,3 +1,5 @@
+/// <reference path="../node_modules/@types/bootstrap/index.d.ts" />
+
 // Shared variable
 let logged_user = null;
 let user_list = null;
@@ -47,8 +49,8 @@ $(async function () {
     loadGroupsPage();
   });
 
-  $('#user_profile_btn').on('click', function () {
-    show_user_info_modal(logged_user.id);
+  $('#user_profile_btn').on('click', async function () {
+    await show_user_info_modal(logged_user.id);
   });
 
   $('#logout_btn').on('click', async function () {
@@ -76,19 +78,18 @@ $(async function () {
     const email = $('#email').val();
     const status = $('#status').val();
     const role = $('#role').val();
+    // User ID will be available after user creation or retrieve from context
+    let user_info = $('#newUserModal').data('selected_user_info') ?? {};
 
     if (!$('#newUserTabContent form')[0].checkValidity()) {
       alert('Email is required field');
       return;
     }
 
-    // Get the user groups
-    const user_group = $('#userGroupsTable').data('new_group_list');
-
     try {
       const mode = $('#createUser').data('mode');
       if (mode === 'new') {
-        const res1 = await fetch('../api/user/create', {
+        const res = await fetch('../api/user/create', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -101,8 +102,8 @@ $(async function () {
             role,
           }),
         });
-        if (!res1.ok) {
-          const error_info = await res1.json();
+        if (!res.ok) {
+          const error_info = await res.json();
           alert(error_info.error.message);
           if (error_info.error.fields) {
             let valid_result = '';
@@ -111,32 +112,83 @@ $(async function () {
             }
             alert(valid_result);
           }
-          return;
         }
-        const new_user = await res1.json();
-        if (user_group) {
-          for (const [_, new_group] of user_group) {
-            const res = await fetch('../api/user/join_group', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                id: new_group.id,
-                role: new_group.role,
-                user_id: new_user.id,
-              }),
-            });
-            if (!res.ok) {
-              const error_info = await res.json();
-              alert(error_info.error.message);
-              return;
+        const { id } = await res.json();
+        user_info.id = id;
+      } else if (mode === 'update') {
+        const res = await fetch(`../api/user/update/${user_info.id}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            // Avoid dup key error
+            username: user_info.username !== username ? username : undefined,
+            fullname,
+            status,
+            role,
+          }),
+        });
+        if (!res.ok) {
+          const error_info = await res.json();
+          alert(error_info.error.message);
+          if (error_info.error.fields) {
+            let valid_result = '';
+            for (const [key, value] of Object.entries(error_info.error.fields)) {
+              valid_result += `${key}: ${value}\n`;
             }
+            alert(valid_result);
           }
         }
-        // Close the modal
-        $('#newUserModal').modal('hide');
       }
+
+      // Get the user groups
+      const user_group_add = $('#userGroupsTable').data('new_group_list');
+      const user_group_leave = $('#userGroupsTable').data('leave_group_list');
+      // Remove exisiting user group
+      if (user_group_leave) {
+        for (const [_, new_group] of user_group_leave) {
+          const res = await fetch('../api/user/leave_group', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              id: new_group.id,
+              user_id: user_info.id,
+            }),
+          });
+          if (!res.ok) {
+            const error_info = await res.json();
+            alert(error_info.error.message);
+          }
+        }
+      }
+      // Join new user group
+      if (user_group_add) {
+        for (const [_, new_group] of user_group_add) {
+          const res = await fetch('../api/user/join_group', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              id: new_group.id,
+              role: new_group.role,
+              user_id: user_info.id,
+            }),
+          });
+          if (!res.ok) {
+            const error_info = await res.json();
+            alert(error_info.error.message);
+          }
+        }
+      }
+
+      // Reload user list
+      loadUsersPage();
+      // Reload user modal
+      await show_user_info_modal(user_info.id, false);
     } catch (e) {
       if (e instanceof Error) {
         console.error(e.message);
@@ -248,6 +300,7 @@ $(async function () {
   });
 });
 
+// Build user list page
 function loadUsersPage() {
   // Replace the main content with the users page
   $('#main-content').html(/* html */ ` 
@@ -294,10 +347,12 @@ function loadUsersPage() {
     $('#userID').closest('div').attr('hidden', true);
     $('#email').attr('disabled', false);
     $('#newUserModal').data('selected_user_info', null);
+    bootstrap.Tab.getInstance($('#newUserTab li:first-child button')).show();
     $('#newUserModal').modal('show');
   });
 }
 
+// Build group list page
 function loadGroupsPage() {
   // Replace the main content with the groups page
   $('#main-content').html(/* html */ `
@@ -370,8 +425,26 @@ async function populateUserTable() {
     `);
     });
 
-    $('#user-table td .edit-button').on('click', function () {
-      show_user_info_modal($(this).closest('tr').data('id'));
+    $('#user-table td .edit-button').on('click', async function () {
+      await show_user_info_modal($(this).closest('tr').data('id'));
+    });
+
+    $('#user-table td .delete-button').on('click', async function () {
+      try {
+        const res = await fetch(`../api/user/delete/${$(this).closest('tr').data('id')}`, {
+          method: 'POST',
+        });
+        if (!res.ok) {
+          const error_info = await res.json();
+          alert(error_info.error.message);
+        }
+        loadUsersPage();
+      } catch (e) {
+        if (e instanceof Error) {
+          console.error(e.message);
+          alert(e.message);
+        }
+      }
     });
   } catch (e) {
     if (e instanceof Error) {
@@ -381,7 +454,8 @@ async function populateUserTable() {
   }
 }
 
-async function show_user_info_modal(user_id) {
+// Build user info modal
+async function show_user_info_modal(user_id, reset_tab = true) {
   try {
     const res = await fetch(`../api/user/list/${user_id}`);
     if (!res.ok) {
@@ -393,6 +467,7 @@ async function show_user_info_modal(user_id) {
     // Cache selected user
     $('#newUserModal').data('selected_user_info', user);
     // Populate the form fields with the current user's information
+    $('newUserModal input').val();
     $('#userID').val(user.id);
     $('#userID').closest('div').attr('hidden', false);
     $('#username').val(user.username);
@@ -424,6 +499,7 @@ async function show_user_info_modal(user_id) {
     $('#userGroupsTable').data('new_group_list', null);
     $('#userGroupsTable').data('leave_group_list', null);
 
+    if (reset_tab) bootstrap.Tab.getInstance($('#newUserTab li:first-child button')).show();
     $('#newUserModal').modal('show');
   } catch (e) {
     if (e instanceof Error) {
@@ -458,37 +534,48 @@ async function populateGroupTable() {
 
     // Edit Group button click event handler
     $('#group-table td .edit-button').on('click', async function () {
-      const group_id = $(this).closest('tr').data('id');
-      try {
-        // Retrieve group information
-        const res1 = await fetch(`../api/group/list/${group_id}`);
-        if (!res1.ok) {
-          const error_info = await res1.json();
-          alert(error_info.error.message);
-          return;
-        }
-        // Retrieve group memeber list
-        const res2 = await fetch(`../api/group/list_members/${group_id}`);
-        if (!res2.ok) {
-          const error_info = await res2.json();
-          alert(error_info.error.message);
-          return;
-        }
-        const group_info = await res1.json();
-        const group_memeber_list = await res2.json();
-        // Cache selected group
-        $('#newGroupModal').data('selected_group_info', { ...group_info, members: group_memeber_list });
-        // Populate the form fields with the current group's information
-        $('#groupId').val(group_info.id);
-        $('#groupId').attr('disabled', true);
-        $('#groupName').val(group_info.name);
+      show_group_info_modal($(this).closest('tr').data('id'));
+    });
+  } catch (e) {
+    if (e instanceof Error) {
+      console.error(e.message);
+      alert(e.message);
+    }
+  }
+}
 
-        const admin_list = [];
-        // Populate the group members table
-        $('#groupMembersTable').empty();
-        group_memeber_list.forEach(function ({ user_id, role }) {
-          if (role.includes('admin')) admin_list.push(user_id);
-          $('#groupMembersTable').append(/* html */ `
+// Build group info modal
+async function show_group_info_modal(group_id) {
+  try {
+    // Retrieve group information
+    const res1 = await fetch(`../api/group/list/${group_id}`);
+    if (!res1.ok) {
+      const error_info = await res1.json();
+      alert(error_info.error.message);
+      return;
+    }
+    // Retrieve group memeber list
+    const res2 = await fetch(`../api/group/list_members/${group_id}`);
+    if (!res2.ok) {
+      const error_info = await res2.json();
+      alert(error_info.error.message);
+      return;
+    }
+    const group_info = await res1.json();
+    const group_memeber_list = await res2.json();
+    // Cache selected group
+    $('#newGroupModal').data('selected_group_info', { ...group_info, members: group_memeber_list });
+    // Populate the form fields with the current group's information
+    $('#groupId').val(group_info.id);
+    $('#groupId').attr('disabled', true);
+    $('#groupName').val(group_info.name);
+
+    const admin_list = [];
+    // Populate the group members table
+    $('#groupMembersTable').empty();
+    group_memeber_list.forEach(function ({ user_id, role }) {
+      if (role.includes('admin')) admin_list.push(user_id);
+      $('#groupMembersTable').append(/* html */ `
             <tr data-id=${user_id}>
               <td>${user_id}</td>
               <td>${role[0]}</td>
@@ -497,20 +584,13 @@ async function populateGroupTable() {
               </td>
             </tr>
           `);
-        });
-        $('#groupAdmin').val(admin_list.toString());
-
-        $('#newGroupModalLabel').text('Update Group');
-        $('#createGroup').text('Save');
-        $('#createGroup').data('mode', 'update');
-        $('#newGroupModal').modal('show');
-      } catch (e) {
-        if (e instanceof Error) {
-          console.error(e.message);
-          alert(e.message);
-        }
-      }
     });
+    $('#groupAdmin').val(admin_list.toString());
+
+    $('#newGroupModalLabel').text('Update Group');
+    $('#createGroup').text('Save');
+    $('#createGroup').data('mode', 'update');
+    $('#newGroupModal').modal('show');
   } catch (e) {
     if (e instanceof Error) {
       console.error(e.message);

@@ -129,7 +129,7 @@ route.post('/join_group', required_auth(2), json(), async (req, res) => {
     if (existing_group) {
       await User.updateOne(
         { id: target_user_id, 'groups.id': join_group.id },
-        { $set: { 'groups.$.role': join_group.role } }
+        { $set: { 'groups.$.role': join_group.role, updated_by: req.auth.user!.id } }
       );
     } else {
       await User.updateOne(
@@ -141,6 +141,7 @@ route.post('/join_group', required_auth(2), json(), async (req, res) => {
               role: join_group?.role,
             },
           },
+          $set: { updated_by: req.auth.user!.id },
         }
       );
     }
@@ -192,7 +193,10 @@ route.post('/leave_group', required_auth(2), json(), async (req, res) => {
       return;
     }
     const target_user_id = leave_group.user_id ? leave_group.user_id : req.auth.user?.id;
-    await User.updateOne({ id: target_user_id }, { $pull: { groups: { id: leave_group.id } } });
+    await User.updateOne(
+      { id: target_user_id },
+      { $pull: { groups: { id: leave_group.id } }, $set: { updated_by: req.auth.user!.id } }
+    );
     res.json({
       leave_group,
     });
@@ -330,8 +334,10 @@ route.post('/delete/:user_id', required_auth(2), async (req, res) => {
   const user_id = req.params?.user_id;
   if (user_id === req.auth.user?.id) {
     res.status(400).json({
-      code: 400,
-      message: 'Invalid request (Cannot delete the current user)',
+      error: {
+        code: 400,
+        message: 'Invalid request (Cannot delete the current user)',
+      },
     });
     return;
   }
@@ -408,7 +414,7 @@ route.post('/update/:user_id?', required_auth(), json(), async (req, res) => {
       });
       return;
     }
-    await User.updateOne({ id: user_id }, { ...update_fields, updated_by: req.auth.user!.id });
+    await User.updateOne({ id: user_id }, { $set: { ...update_fields, updated_by: req.auth.user!.id } });
     res.json({
       update: update_fields,
     });
@@ -427,11 +433,11 @@ route.post('/update/:user_id?', required_auth(), json(), async (req, res) => {
           fields: errors,
         },
       });
-    } else if (e instanceof mongoose.mongo.MongoError) {
-      res.status(400).json({
+    } else if (e instanceof mongoose.mongo.MongoError && e.code === 11000) {
+      res.status(409).json({
         error: {
-          code: 400,
-          message: 'Unable to update user profile',
+          code: 409,
+          message: 'Duplicate user email or username (User already exist)',
         },
       });
     } else {
