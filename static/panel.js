@@ -22,7 +22,7 @@ $(async function () {
     logged_user = await res.json();
     $('#login_username').text(logged_user.username);
     $('#login_role').text(logged_user.role[0]);
-    $('#user_label').attr('hidden', false);
+    $('#user_label').prop('hidden', false);
   } catch (e) {
     if (e instanceof Error) {
       console.error(e);
@@ -147,14 +147,14 @@ $(async function () {
       const user_group_leave = $('#userGroupsTable').data('leave_group_list');
       // Remove exisiting user group
       if (user_group_leave) {
-        for (const [_, new_group] of user_group_leave) {
+        for (const [_, group] of user_group_leave) {
           const res = await fetch('../api/user/leave_group', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              id: new_group.id,
+              id: group.id,
               user_id: user_info.id,
             }),
           });
@@ -242,29 +242,134 @@ $(async function () {
 
   // Setup event handler for Group Modal
   // Create Group button click event handler
-  $('#createGroup').on('click', function () {
+  $('#createGroup').on('click', async function () {
     // Get the group information from the form
     const groupId = $('#groupId').val();
     const groupName = $('#groupName').val();
-    const validYears = $('#validYears').val();
-    const groupAdmin = $('#groupAdmin').val();
+    const groupType = $('#groupType').val() || undefined;
+    // Extra: Course
+    const courseYear = $('#courseYear').val();
+    const course_meta = {
+      course_year: courseYear,
+    };
+    let meta = undefined;
 
-    // Get the group members
-    const groupMembers = [];
-    $('#groupMembersTable tr').each(function () {
-      groupMembers.push($(this).find('td:first-child').text());
-    });
+    if (groupType === 'course') {
+      meta = course_meta;
+    }
 
-    // Perform the necessary actions to create the new group
-    console.log('Group Information:');
-    console.log('Group ID:', groupId);
-    console.log('Group Name:', groupName);
-    console.log('Valid Years:', validYears);
-    console.log('Group Admin:', groupAdmin);
-    console.log('Group Members:', groupMembers);
+    // Get the group info
+    const group_info = $('#newGroupModal').data('selected_group_info') ?? {};
+    if (!$('#newGroupTabContent form')[0].checkValidity()) {
+      alert('Group ID is required field');
+      return;
+    }
 
-    // Close the modal
-    $('#newGroupModal').modal('hide');
+    try {
+      const mode = $('#createGroup').data('mode');
+      if (mode === 'new') {
+        const res = await fetch('../api/group/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            id: groupId,
+            name: groupName,
+            type: groupType,
+            meta,
+          }),
+        });
+        if (!res.ok) {
+          const error_info = await res.json();
+          alert(error_info.error.message);
+          if (error_info.error.fields) {
+            let valid_result = '';
+            for (const [key, value] of Object.entries(error_info.error.fields)) {
+              valid_result += `${key}: ${value}\n`;
+            }
+            alert(valid_result);
+          }
+        }
+        const { id } = await res.json();
+        group_info.id = id;
+      } else if (mode === 'update') {
+        const res = await fetch(`../api/group/update/${group_info.id}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: groupName,
+            meta,
+          }),
+        });
+        if (!res.ok) {
+          const error_info = await res.json();
+          alert(error_info.error.message);
+          if (error_info.error.fields) {
+            let valid_result = '';
+            for (const [key, value] of Object.entries(error_info.error.fields)) {
+              valid_result += `${key}: ${value}\n`;
+            }
+            alert(valid_result);
+          }
+        }
+      }
+
+      // Get the user groups
+      const group_memeber_add = $('#groupMembersTable').data('new_user_list');
+      const group_memeber_remove = $('#groupMembersTable').data('remove_user_list');
+      // Remove exisiting user group
+      if (group_memeber_remove) {
+        for (const [_, user] of group_memeber_remove) {
+          const res = await fetch('../api/user/leave_group', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              id: group_info.id,
+              user_id: user.id,
+            }),
+          });
+          if (!res.ok) {
+            const error_info = await res.json();
+            alert(error_info.error.message);
+          }
+        }
+      }
+      // Join new user group
+      if (group_memeber_add) {
+        for (const [_, user] of group_memeber_add) {
+          const res = await fetch('../api/user/join_group', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              id: group_info.id,
+              role: user.role,
+              user_id: user.id,
+            }),
+          });
+          if (!res.ok) {
+            const error_info = await res.json();
+            alert(error_info.error.message);
+          }
+        }
+      }
+
+      // Reload user list
+      loadGroupsPage();
+      // Reload user modal
+      await show_group_info_modal(group_info.id, false);
+    } catch (e) {
+      if (e instanceof Error) {
+        console.error(e.message);
+        alert(e.message);
+      }
+    }
   });
 
   // Add User button click event handler
@@ -273,7 +378,7 @@ $(async function () {
     const role = $('#addUserRoleInput').val();
     if (userId) {
       $('#groupMembersTable').prepend(/* html */ `
-            <tr>
+            <tr class='newly-added-item' data-id=${userId}>
               <td>${userId}</td>
               <td>${role}</td>
               <td class='text-end'>
@@ -282,12 +387,32 @@ $(async function () {
             </tr>
           `);
       $('#userInput').val('');
+      const new_user = { user_id: userId, role: [role] };
+      const new_user_list = $('#groupMembersTable').data('new_user_list');
+      if (new_user_list) {
+        new_user_list.set(new_user.userId, new_user);
+      } else {
+        $('#groupMembersTable').data('new_user_list', new Map([[new_user.user_id, new_user]]));
+      }
     }
   });
 
   // Remove Group Member button click event handler
   $('#groupMembersTable').on('click', '.btn-danger', function () {
-    $(this).closest('tr').remove();
+    const row = $(this).closest('tr');
+    const id = row.data('id');
+    if (row.hasClass('newly-added-item')) {
+      const new_user_list = $('#groupMembersTable').data('new_user_list');
+      new_user_list.delete(id);
+    } else {
+      const remove_user_list = $('#groupMembersTable').data('remove_user_list');
+      if (remove_user_list) {
+        remove_user_list.push(id);
+      } else {
+        $('#groupMembersTable').data('remove_user_list', [id]);
+      }
+    }
+    row.remove();
   });
 
   // Import Members button click event handler
@@ -297,6 +422,10 @@ $(async function () {
       // Handle the CSV file upload and import members
       console.log('Importing members from CSV:', csvFile.name);
     }
+  });
+
+  $('#groupType').on('change', function () {
+    update_group_info_model_opts($(this).val());
   });
 });
 
@@ -344,8 +473,8 @@ function loadUsersPage() {
     $('#createUser').data('mode', 'new');
     $('#newUserTabContent form')[0].reset();
     $('#userGroupsTable').empty();
-    $('#userID').closest('div').attr('hidden', true);
-    $('#email').attr('disabled', false);
+    $('#userID').closest('div').prop('hidden', true);
+    $('#email').prop('disabled', false);
     $('#newUserModal').data('selected_user_info', null);
     bootstrap.Tab.getInstance($('#newUserTab li:first-child button')).show();
     $('#newUserModal').modal('show');
@@ -393,10 +522,11 @@ function loadGroupsPage() {
     $('#newGroupModalLabel').text('New Group');
     $('#createGroup').text('Create');
     $('#createGroup').data('mode', 'new');
-    $('#groupId').attr('disabled', false);
+    $('#groupId').prop('disabled', false);
     $('#newGroupTabContent form')[0].reset();
     $('#groupMembersTable').empty();
     $('#newGroupModal').data('selected_group_info', null);
+    update_group_info_model_opts();
     $('#newGroupModal').modal('show');
   });
 }
@@ -469,11 +599,11 @@ async function show_user_info_modal(user_id, reset_tab = true) {
     // Populate the form fields with the current user's information
     $('newUserModal input').val();
     $('#userID').val(user.id);
-    $('#userID').closest('div').attr('hidden', false);
+    $('#userID').closest('div').prop('hidden', false);
     $('#username').val(user.username);
     $('#fullname').val(user.fullname);
     $('#email').val(user.linked_email);
-    $('#email').attr('disabled', true);
+    $('#email').prop('disabled', true);
     $('#status').val(user.status);
     $('#role').val(user.role[0]);
 
@@ -567,8 +697,14 @@ async function show_group_info_modal(group_id) {
     $('#newGroupModal').data('selected_group_info', { ...group_info, members: group_memeber_list });
     // Populate the form fields with the current group's information
     $('#groupId').val(group_info.id);
-    $('#groupId').attr('disabled', true);
+    $('#groupId').prop('disabled', true);
     $('#groupName').val(group_info.name);
+    $('#groupType').val(group_info.type);
+    // Show extra field for course type
+    update_group_info_model_opts(group_info.type);
+    if (group_info.type == 'course') {
+      $('#courseYear').val(group_info.meta?.course_year || '');
+    }
 
     const admin_list = [];
     // Populate the group members table
@@ -585,7 +721,6 @@ async function show_group_info_modal(group_id) {
             </tr>
           `);
     });
-    $('#groupAdmin').val(admin_list.toString());
 
     $('#newGroupModalLabel').text('Update Group');
     $('#createGroup').text('Save');
@@ -596,6 +731,15 @@ async function show_group_info_modal(group_id) {
       console.error(e.message);
       alert(e.message);
     }
+  }
+}
+
+function update_group_info_model_opts(course_type) {
+  $('#newGroupModal .group-extra-opts').prop('hidden', true);
+  $('#newGroupModal .group-extra-opts > input').prop('disabled', true);
+  if (course_type === 'course') {
+    $('#newGroupModal .course-type-extra-opts').prop('hidden', false);
+    $('#newGroupModal .course-type-extra-opts > input').prop('disabled', false);
   }
 }
 

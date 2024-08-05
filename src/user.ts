@@ -46,51 +46,6 @@ route.get('/me', required_auth(), async (req, res) => {
   }
 });
 
-route.get('/groups', required_auth(), async (req, res) => {
-  try {
-    const result = await User.findOne(
-      { id: req.auth.user?.id },
-      {
-        'groups.name': 1,
-        'groups.role': 1,
-      }
-    );
-    if (result === null) {
-      res.status(404).json({
-        error: {
-          code: 404,
-          message: 'Current user information is not available',
-        },
-      });
-      return;
-    }
-    res.json(
-      result.groups.map((v) => {
-        if (v.role && v.role.length > 0) {
-          return v;
-        } else return v.id;
-      })
-    );
-  } catch (e) {
-    if (e instanceof mongoose.mongo.MongoError) {
-      res.status(400).json({
-        error: {
-          code: 400,
-          message: 'Unable to fetch user profile',
-        },
-      });
-    } else {
-      res.status(500).json({
-        error: {
-          code: 500,
-          message: 'Unknown error',
-        },
-      });
-      console.error(e);
-    }
-  }
-});
-
 route.post('/join_group', required_auth(2), json(), async (req, res) => {
   try {
     const allowed_fields = ['id', 'role', 'user_id'];

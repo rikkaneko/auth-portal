@@ -33,6 +33,7 @@ export interface IUser {
 export interface IGroup {
   id: string;
   name: string;
+  type: 'course' | 'default';
   meta: Record<string, string | number>;
   created_by?: string;
   updated_by?: string;
@@ -135,6 +136,10 @@ const GroupSchema = new Schema<IGroup>(
     name: {
       type: String,
       required: true,
+    },
+    type: {
+      type: String,
+      enum: ['course'],
     },
     meta: Schema.Types.Mixed,
     created_by: String,
