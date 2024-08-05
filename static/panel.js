@@ -30,8 +30,20 @@ $(async function () {
     }
   }
 
-  // Load the initial page
-  loadUsersPage();
+  const page = window.location.href.split('#');
+  if (page.length === 2) {
+    switch (page[1]) {
+      case 'user':
+        loadUsersPage();
+        break;
+      case 'group':
+        loadGroupsPage();
+        break;
+    }
+  } else {
+    // Load the initial page
+    loadUsersPage();
+  }
 
   // Sidebar click event handlers
   $('#user-sidebar').on('click', function () {
