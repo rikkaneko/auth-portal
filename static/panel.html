@@ -6,7 +6,10 @@
     <title>Auth Portal</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.0/themes/base/jquery-ui.min.css"/>
+    <link rel="stylesheet" href="panel.css"/>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.0/jquery-ui.min.js"></script>
     <style>
       .sidebar {
         background-color: #f8f9fa;
@@ -78,12 +81,12 @@
               <div class="tab-pane fade show active" id="group-info" role="tabpanel" aria-labelledby="group-info-tab">  
                 <form>
                   <div class="mb-2">
-                    <label for="groupId" class="form-label">Group ID</label>
-                    <input type="text" class="form-control" id="groupId" placeholder="Enter group ID" required>
+                    <label for="groupId" class="form-label">Group ID (*)</label>
+                    <input type="text" class="form-control" id="groupId" placeholder="" required>
                   </div>
                   <div class="mb-2">
                     <label for="groupName" class="form-label">Group Name</label>
-                    <input type="text" class="form-control" id="groupName" placeholder="Enter group name">
+                    <input type="text" class="form-control" id="groupName" placeholder="">
                   </div>
                   <div class="mb-2">
                     <label for="groupType" class="form-label">Group Type</label>
@@ -102,7 +105,7 @@
                 <div class="mb-2">
                   <label for="userInput" class="form-label">Add User</label>
                   <div class="input-group">
-                    <input type="text" class="form-control w-50" id="userInput" placeholder="Enter user ID">
+                    <input type="text" class="form-control w-50" id="userInput" placeholder="">
                     <select class="form-select" id="addUserRoleInput">
                       <option value="student">Student</option>
                       <option value="teacher">Teacher</option>
@@ -114,8 +117,8 @@
                 <div class="mb-2">
                   <label for="csvFile" class="form-label">Import From CSV</label>
                   <div class="input-group">
-                    <input type="file" class="form-control" id="csvFile" accept=".csv">
-                    <button class="btn btn-primary" id="importMembers">Import</button>
+                    <input type="file" class="form-control" id="csvFile" accept=".csv" disabled>
+                    <button class="btn btn-primary" id="importMembers" disabled>Import</button>
                   </div>
                 </div>            
                 <hr>
@@ -169,15 +172,15 @@
                   </div>
                   <div class="mb-3">
                     <label for="email" class="form-label">Email Address (*)</label>
-                    <input type="email" class="form-control" id="email" placeholder="Enter email address" required>
+                    <input type="email" class="form-control" id="email" placeholder="username@example.com" required>
                   </div>
                   <div class="mb-2">
                     <label for="username" class="form-label">Username</label>
-                    <input type="text" class="form-control" id="username" placeholder="Enter username">
+                    <input type="text" class="form-control" id="username" placeholder="">
                   </div>
                   <div class="mb-2">
                     <label for="fullname" class="form-label">Full Name</label>
-                    <input type="text" class="form-control" id="fullname" placeholder="Enter full name">
+                    <input type="text" class="form-control" id="fullname" placeholder="">
                   </div>
                   <div class="mb-2">
                     <label for="status" class="form-label">Status</label>
@@ -201,7 +204,7 @@
                 <div class="mb-3">
                   <label for="groupInput" class="form-label">Join Group</label>
                   <div class="input-group">
-                    <input type="text" class="form-control w-50" id="groupInput" placeholder="Enter group ID">
+                    <input type="text" class="form-control w-50" id="groupInput" placeholder="">
                     <select class="form-select" id="joinGroupRoleInput">
                       <option value="student">Student</option>
                       <option value="teacher">Teacher</option>

@@ -66,6 +66,14 @@ route.get('/token', async (req, res) => {
       }
       return;
     }
+    if (user.status !== 'active') {
+      res.status(403).json({
+        error: {
+          code: 403,
+          message: 'This account cannot be used to login',
+        },
+      });
+    }
     const signed_token = sign_token(user);
     const auth_response: AuthResponse = {
       auth_token: signed_token,
@@ -162,6 +170,14 @@ route.post('/token', async (req, res) => {
         },
       });
       return;
+    }
+    if (user.status !== 'active') {
+      res.status(403).json({
+        error: {
+          code: 403,
+          message: `This account has been ${user.status}`,
+        },
+      });
     }
     if (user.refresh_tokens[0].expiration < new Date()) {
       await User.updateOne({ id: user.id }, { $pull: { refresh_tokens: { token } } });

@@ -1,0 +1,9 @@
+.ui-autocomplete {
+  overflow-y: auto;
+  /* prevent horizontal scrollbar */
+  overflow-x: hidden;
+}
+
+.ui-autocomplete::-webkit-scrollbar {
+  display: none;
+}

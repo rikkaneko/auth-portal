@@ -82,12 +82,21 @@ route.post('/join_group', required_auth(2), json(), async (req, res) => {
     const target_user_id = join_group.user_id ? join_group.user_id : req.auth.user?.id;
     const existing_group = await User.findOne({ id: target_user_id, 'groups.id': join_group.id });
     if (existing_group) {
-      await User.updateOne(
+      const update = await User.updateOne(
         { id: target_user_id, 'groups.id': join_group.id },
         { $set: { 'groups.$.role': join_group.role, updated_by: req.auth.user!.id } }
       );
+      if (update.modifiedCount <= 0) {
+        res.status(400).json({
+          error: {
+            code: 400,
+            message: 'User ID does not exist',
+          },
+        });
+        return;
+      }
     } else {
-      await User.updateOne(
+      const update = await User.updateOne(
         { id: target_user_id },
         {
           $push: {
@@ -99,6 +108,15 @@ route.post('/join_group', required_auth(2), json(), async (req, res) => {
           $set: { updated_by: req.auth.user!.id },
         }
       );
+      if (update.modifiedCount <= 0) {
+        res.status(400).json({
+          error: {
+            code: 400,
+            message: 'User ID does not exist',
+          },
+        });
+        return;
+      }
     }
     res.json({
       join_group,
@@ -148,10 +166,19 @@ route.post('/leave_group', required_auth(2), json(), async (req, res) => {
       return;
     }
     const target_user_id = leave_group.user_id ? leave_group.user_id : req.auth.user?.id;
-    await User.updateOne(
+    const update = await User.updateOne(
       { id: target_user_id },
       { $pull: { groups: { id: leave_group.id } }, $set: { updated_by: req.auth.user!.id } }
     );
+    if (update.modifiedCount <= 0) {
+      res.status(400).json({
+        error: {
+          code: 400,
+          message: 'User ID does not exist',
+        },
+      });
+      return;
+    }
     res.json({
       leave_group,
     });
@@ -175,9 +202,21 @@ route.post('/leave_group', required_auth(2), json(), async (req, res) => {
   }
 });
 
-route.get('/list/:user_id?', required_auth(2), async (req, res) => {
+route.get('/list/:user_id?', required_auth(0), async (req, res) => {
+  // Allow normal user to query himself (same as /me)
+  if (req.auth!.privilege_level! < 2 && req.params?.user_id && req.params.user_id !== req.auth.user!.id) {
+    res.status(403).json({
+      error: {
+        code: 403,
+        message: 'Unauthorized',
+      },
+    });
+    return;
+  }
   const result = await User.find(
-    req.params.user_id ? { id: req.params.user_id } : {},
+    // If contains user_id, then use user_id to query user information
+    // If Not, depends on the user privilege level, only level 2 or above can get the full user list
+    req.params.user_id ? { id: req.params.user_id } : req.auth!.privilege_level! < 2 ? { id: req.auth.user!.id } : {},
     req.params.user_id ? { ...hidden_user_field } : { ...hidden_user_field, groups: 0 }
   );
   if (req.params.user_id && result.length <= 0) {
@@ -338,14 +377,15 @@ route.post('/update/:user_id?', required_auth(), json(), async (req, res) => {
   const update_fields: IUser = req.body;
   // Only admin role can update others' sensitive fields
   if (req.auth.privilege_level! < 3) {
-    if (user_id || !!update_fields?.role || !!update_fields?.status)
+    if ((user_id && user_id !== req.auth.user?.id) || !!update_fields?.role || !!update_fields?.status) {
       res.status(403).json({
         error: {
           code: 403,
           message: 'Permission denied (Require admin role)',
         },
       });
-    return;
+      return;
+    }
   }
   if (!user_id) user_id = req.auth.user!.id;
   if (!update_fields) {
@@ -369,7 +409,16 @@ route.post('/update/:user_id?', required_auth(), json(), async (req, res) => {
       });
       return;
     }
-    await User.updateOne({ id: user_id }, { $set: { ...update_fields, updated_by: req.auth.user!.id } });
+    const update = await User.updateOne({ id: user_id }, { $set: { ...update_fields, updated_by: req.auth.user!.id } });
+    if (update.modifiedCount <= 0) {
+      res.status(400).json({
+        error: {
+          code: 400,
+          message: 'User ID does not exist',
+        },
+      });
+      return;
+    }
     res.json({
       update: update_fields,
     });
