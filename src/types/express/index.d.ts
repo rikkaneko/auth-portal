@@ -16,9 +16,7 @@ declare module 'express-session' {
     failed_redirect_url?: string;
     need_refresh_token?: boolean;
     panel?: boolean;
-    state?: string;
     pkce?: {
-      codes?: string;
       verifier?: string;
       challenge?: string;
       challenge_method?: string;

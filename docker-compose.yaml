@@ -38,8 +38,3 @@ services:
 
 volumes:
   db:
-
-networks:
-  default:
-    name: nginx-proxy-net
-    external: true

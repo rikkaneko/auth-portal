@@ -56,10 +56,13 @@ const UserSchema = new Schema<IUser>(
       required: true,
       unique: true,
     },
-    role: {
-      type: [String],
-      required: true,
-    },
+    role: [
+      {
+        type: String,
+        trim: true,
+        required: true,
+      },
+    ],
     username: {
       type: String,
       required: true,

@@ -202,7 +202,7 @@ route.post('/leave_group', required_auth(2), json(), async (req, res) => {
   }
 });
 
-route.get('/list/:user_id?', required_auth(0), async (req, res) => {
+route.get('/list/:user_id?', required_auth(), async (req, res) => {
   // Allow normal user to query himself (same as /me)
   if (req.auth!.privilege_level! < 2 && req.params?.user_id && req.params.user_id !== req.auth.user!.id) {
     res.status(403).json({
