@@ -48,6 +48,10 @@
       </div>
     </nav>
 
+    <div class="m-4">
+
+    <div class="toast-container position-fixed bottom-0 end-0 p-3"></div>
+
     <div class="container-fluid">
       <div class="row">
         <div class="col-3 sidebar">
@@ -82,22 +86,24 @@
                 <form>
                   <div class="mb-2">
                     <label for="groupId" class="form-label">Group ID (*)</label>
-                    <input type="text" class="form-control" id="groupId" placeholder="" required>
+                    <input type="text" class="form-control" id="groupId" name="group_id" placeholder="" required>
                   </div>
                   <div class="mb-2">
                     <label for="groupName" class="form-label">Group Name</label>
-                    <input type="text" class="form-control" id="groupName" placeholder="">
+                    <input type="text" class="form-control" id="groupName" name="group_name" placeholder="">
                   </div>
                   <div class="mb-2">
                     <label for="groupType" class="form-label">Group Type</label>
-                    <select class="form-select" id="groupType">
+                    <select class="form-select" id="groupType" name="group_type">
                       <option value="" selected>-</option>
                       <option value="course">Course</option>
                     </select>
                   </div>
-                  <div class="mb-2 group-extra-opts course-type-extra-opts" hidden>
-                    <label for="courseYear" class="form-label">Year/Semester</label>
-                    <input type="text" class="form-control" id="courseYear" placeholder="2024/2" disabled>
+                  <div class="group-extra-opts course-type-extra-opts" hidden>
+                    <div class="mb-2">
+                      <label for="courseYear" class="form-label">Year/Semester</label>
+                      <input type="text" class="form-control" id="courseYear" name="course_year" placeholder="2024/2" disabled>
+                    </div>
                   </div>
                 </form>
               </div>
@@ -168,23 +174,23 @@
                 <form>
                   <div class="mb-2" hidden>
                     <label for="userID" class="form-label">User ID</label>
-                    <input type="text" class="form-control" id="userID" disabled>
+                    <input type="text" class="form-control" name="user_id" disabled>
                   </div>
                   <div class="mb-3">
                     <label for="email" class="form-label">Email Address (*)</label>
-                    <input type="email" class="form-control" id="email" placeholder="username@example.com" required>
+                    <input type="email" class="form-control" name="email" placeholder="username@example.com" required>
                   </div>
                   <div class="mb-2">
                     <label for="username" class="form-label">Username</label>
-                    <input type="text" class="form-control" id="username" placeholder="">
+                    <input type="text" class="form-control" name="username" placeholder="">
                   </div>
                   <div class="mb-2">
                     <label for="fullname" class="form-label">Full Name</label>
-                    <input type="text" class="form-control" id="fullname" placeholder="">
+                    <input type="text" class="form-control" name="fullname" placeholder="">
                   </div>
                   <div class="mb-2">
                     <label for="status" class="form-label">Status</label>
-                    <select class="form-select" id="status" style="width: 10rem;">
+                    <select class="form-select" name="status" style="width: 10rem;">
                       <option value="active">Active</option>
                       <option value="disabled">Disabled</option>
                       <option value="locked">Locked</option>
@@ -192,7 +198,7 @@
                   </div>
                   <div class="mb-2">
                     <label for="role" class="form-label">Role</label>
-                    <select class="form-select" id="role" style="width: 10rem;">
+                    <select class="form-select" name="role" style="width: 10rem;">
                       <option value="student">Student</option>
                       <option value="teacher">Teacher</option>
                       <option value="admin">Admin</option>

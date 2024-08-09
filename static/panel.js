@@ -5,6 +5,37 @@ let logged_user = null;
 let user_list = null;
 let group_list = null;
 
+function show_pop_alert(title, message, icon = 'bi-check-lg') {
+  // Remove oldest toast
+  const count = $('.toast-container').children().length;
+  if (count > 6) {
+    $('.toast-container').children().last().remove();
+  }
+
+  const toast = $(
+    `<div class="toast show" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="true">
+        <div class="toast-header">
+          <strong class="me-auto text-truncate"><i class="${icon} me-2"></i>${title}</strong>
+          <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body">
+          ${message}
+        </div>
+      </div>`
+  );
+
+  $('.toast-container').prepend(toast);
+
+  $('.toast .btn-close').on('click', function () {
+    $(this).closest('.toast').remove();
+  });
+
+  // Auto remove current toast
+  setTimeout(() => {
+    toast?.remove();
+  }, 10000);
+}
+
 $(async function () {
   try {
     const res = await fetch('../api/user/me');
@@ -85,16 +116,16 @@ $(async function () {
   // Create User button click event handler
   $('#createUser').on('click', async function () {
     // Get the user information from the form
-    const username = $('#username').val() || undefined;
-    const fullname = $('#fullname').val() || '';
-    const email = $('#email').val();
-    const status = $('#status').val();
-    const role = $('#role').val();
+    const username = $('#user-info input[name="user_id"]').val() || undefined;
+    const fullname = $('#user-info input[name="fullname"]').val() || '';
+    const email = $('#user-info input[name="email"]').val();
+    const status = $('#user-info input[name="status"]').val();
+    const role = $('#user-info select[name="role"]').val();
     // User ID will be available after user creation or retrieve from context
     let user_info = $('#newUserModal').data('selected_user_info') ?? {};
 
     if (!$('#newUserTabContent form')[0].checkValidity()) {
-      alert('Email is required field');
+      show_pop_alert('Validation', 'Email is required field', 'bi-x-lg');
       return;
     }
 
@@ -116,17 +147,19 @@ $(async function () {
         });
         if (!res.ok) {
           const error_info = await res.json();
-          alert(error_info.error.message);
+          show_pop_alert('User Creation', error_info.error.message, 'bi-x-lg');
           if (error_info.error.fields) {
             let valid_result = '';
             for (const [key, value] of Object.entries(error_info.error.fields)) {
               valid_result += `${key}: ${value}\n`;
             }
-            alert(valid_result);
+            show_pop_alert('Validation', valid_result.trim(), 'bi-x-lg');
           }
+          return;
         }
         const { id } = await res.json();
         user_info.id = id;
+        show_pop_alert('User Creation', `User ${user_info.id} created`);
       } else if (mode === 'update') {
         const update_info = {
           username,
@@ -149,17 +182,20 @@ $(async function () {
         });
         if (!res.ok) {
           const error_info = await res.json();
-          alert(error_info.error.message);
+          show_pop_alert('User Information Update', error_info.error.message, 'bi-x-lg');
           if (error_info.error.fields) {
             let valid_result = '';
             for (const [key, value] of Object.entries(error_info.error.fields)) {
               valid_result += `${key}: ${value}\n`;
             }
-            alert(valid_result);
+            show_pop_alert('Validation', valid_result.trim(), 'bi-x-lg');
           }
+          return;
         }
+        show_pop_alert('User Information Update', `User ${user_info.id} updated successfully`);
       }
 
+      let all_pass = true;
       // Get the user groups
       const user_group_add = $('#userGroupsTable').data('new_group_list');
       const user_group_leave = $('#userGroupsTable').data('leave_group_list');
@@ -178,7 +214,8 @@ $(async function () {
           });
           if (!res.ok) {
             const error_info = await res.json();
-            alert(error_info.error.message);
+            show_pop_alert(`Removing User ${group_id} From Group...`, error_info.error.message, 'bi-x-lg');
+            all_pass = false;
           }
         }
       }
@@ -198,10 +235,21 @@ $(async function () {
           });
           if (!res.ok) {
             const error_info = await res.json();
-            alert(error_info.error.message);
+            show_pop_alert(`Adding User To Group ${new_group.id}...`, error_info.error.message, 'bi-x-lg');
+            all_pass = false;
           }
         }
       }
+
+      if (user_group_leave || user_group_add)
+        if (all_pass) {
+          show_pop_alert('User Group Information Updated', `User group information updated successfully`);
+        } else {
+          show_pop_alert(
+            'User Group Information Updated',
+            `Some error occurred. The user group information is updated`
+          );
+        }
 
       // Reload user list
       loadUsersPage();
@@ -210,7 +258,7 @@ $(async function () {
     } catch (e) {
       if (e instanceof Error) {
         console.error(e.message);
-        alert(e.message);
+        show_pop_alert('Internal Error', e.message, 'bi-x-lg');
       }
     }
   });
@@ -262,24 +310,23 @@ $(async function () {
   // Create Group button click event handler
   $('#createGroup').on('click', async function () {
     // Get the group information from the form
-    const groupId = $('#groupId').val();
-    const groupName = $('#groupName').val();
-    const groupType = $('#groupType').val() || undefined;
-    // Extra: Course
-    const courseYear = $('#courseYear').val();
-    const course_meta = {
-      course_year: courseYear,
-    };
+    const groupId = $('#group-info [name="group_id"]').val();
+    const groupName = $('#group-info [name="group_name"]').val();
+    const groupType = $('#group-info [name="group_type"]').val() || undefined;
     let meta = undefined;
 
-    if (groupType === 'course') {
-      meta = course_meta;
+    if (groupType == 'course') {
+      // Extra: Course
+      const courseYear = $('div.course-type-extra-opts [name="course_year"]').val();
+      meta = {
+        course_year: courseYear,
+      };
     }
 
     // Get the group info
     const group_info = $('#newGroupModal').data('selected_group_info') ?? {};
     if (!$('#newGroupTabContent form')[0].checkValidity()) {
-      alert('Group ID is required field');
+      show_pop_alert('Validation', 'Group ID is required field', 'bi-x-lg');
       return;
     }
 
@@ -300,17 +347,19 @@ $(async function () {
         });
         if (!res.ok) {
           const error_info = await res.json();
-          alert(error_info.error.message);
+          show_pop_alert('Create Group', error_info.error.message, 'bi-x-lg');
           if (error_info.error.fields) {
             let valid_result = '';
             for (const [key, value] of Object.entries(error_info.error.fields)) {
               valid_result += `${key}: ${value}\n`;
             }
-            alert(valid_result);
+            show_pop_alert('Validation', valid_result.trim(), 'bi-x-lg');
           }
+          return;
         }
         const { id } = await res.json();
         group_info.id = id;
+        show_pop_alert('Group Created', `Group ${id} created`);
       } else if (mode === 'update') {
         const res = await fetch(`../api/group/update/${group_info.id}`, {
           method: 'POST',
@@ -324,17 +373,20 @@ $(async function () {
         });
         if (!res.ok) {
           const error_info = await res.json();
-          alert(error_info.error.message);
+          show_pop_alert('Update Group', error_info.error.message, 'bi-x-lg');
           if (error_info.error.fields) {
             let valid_result = '';
             for (const [key, value] of Object.entries(error_info.error.fields)) {
               valid_result += `${key}: ${value}\n`;
             }
-            alert(valid_result);
+            show_pop_alert('Validation', valid_result.trim(), 'bi-x-lg');
           }
+          return;
         }
+        show_pop_alert('Group Information Update', `Group ${group_info.id} updated sucessfully`);
       }
 
+      let all_pass = true;
       // Get the user groups
       const group_memeber_add = $('#groupMembersTable').data('new_user_list');
       const group_memeber_remove = $('#groupMembersTable').data('remove_user_list');
@@ -353,7 +405,8 @@ $(async function () {
           });
           if (!res.ok) {
             const error_info = await res.json();
-            alert(error_info.error.message);
+            show_pop_alert(`Leaving Group ${group_info.id}...`, error_info.error.message, 'bi-x-lg');
+            all_pass = false;
           }
         }
       }
@@ -373,10 +426,18 @@ $(async function () {
           });
           if (!res.ok) {
             const error_info = await res.json();
-            alert(error_info.error.message);
+            show_pop_alert(`Joining Group ${group_info.id}...`, error_info.error.message, 'bi-x-lg');
+            all_pass = false;
           }
         }
       }
+
+      if (group_memeber_remove || group_memeber_add)
+        if (all_pass) {
+          show_pop_alert('Group Memeber List Updated', `Group memeber list updated successfully`);
+        } else {
+          show_pop_alert('Group Memeber List Updated', `Some error occurred. The group memeber list is updated`);
+        }
 
       // Reload user list
       loadGroupsPage();
@@ -385,7 +446,7 @@ $(async function () {
     } catch (e) {
       if (e instanceof Error) {
         console.error(e.message);
-        alert(e.message);
+        show_pop_alert('Internal Error', e.message, 'bi-x-lg');
       }
     }
   });
@@ -442,7 +503,7 @@ $(async function () {
     }
   });
 
-  $('#groupType').on('change', function () {
+  $('#group-info [name="group_type"]').on('change', function () {
     update_group_info_model_opts($(this).val());
   });
 });
@@ -491,8 +552,8 @@ function loadUsersPage() {
     $('#createUser').data('mode', 'new');
     $('#newUserTabContent form')[0].reset();
     $('#userGroupsTable').empty();
-    $('#userID').closest('div').prop('hidden', true);
-    $('#email').prop('disabled', false);
+    $('#user-info input[name="user_id"]').closest('div').prop('hidden', true);
+    $('#user-info input[name="email"]').prop('disabled', false);
     $('#newUserModal').data('selected_user_info', null);
     bootstrap.Tab.getInstance($('#newUserTab li:first-child button')).show();
 
@@ -508,7 +569,7 @@ function loadUsersPage() {
       .autocomplete({
         source: group_list?.map((v) => v.id) ?? [],
         maxShowItems: 5,
-        appendTo: '#newUserTabContent',
+        appendTo: '#user-info',
         minLength: 0,
       })
       .focus(function () {
@@ -560,11 +621,12 @@ function loadGroupsPage() {
     $('#newGroupModalLabel').text('New Group');
     $('#createGroup').text('Create');
     $('#createGroup').data('mode', 'new');
-    $('#groupId').prop('disabled', false);
+    $('#group-info [name="group_id"]').prop('disabled', false);
     $('#newGroupTabContent form')[0].reset();
     $('#groupMembersTable').empty();
     $('#newGroupModal').data('selected_group_info', null);
     update_group_info_model_opts();
+    $('#group-info [name="group_type"]').prop('disabled', false);
     bootstrap.Tab.getInstance($('#newGroupTab li:first-child button')).show();
 
     // Setup authcomplete for user list
@@ -595,7 +657,7 @@ async function populateUserTable() {
     const res = await fetch('../api/user/list');
     if (!res.ok) {
       const error_info = await res.json();
-      alert(error_info.error.message);
+      show_pop_alert('Fetch User Table', error_info.error.message, 'bi-x-lg');
       return;
     }
     user_list = await res.json();
@@ -605,7 +667,7 @@ async function populateUserTable() {
       <tr data-id=${user.id}>
         <td>${user.username}</td>
         <td>${user.linked_email}</td>
-        <td>${user.role[0]}</td>
+        <td>${user.role}</td>
         <td class="text-end">
           <button class="btn btn-sm btn-primary edit-button">Edit</button>
           <button class="btn btn-sm btn-danger delete-button">Delete</button>
@@ -620,25 +682,28 @@ async function populateUserTable() {
 
     $('#user-table td .delete-button').on('click', async function () {
       try {
-        const res = await fetch(`../api/user/delete/${$(this).closest('tr').data('id')}`, {
+        const user_id = $(this).closest('tr').data('id');
+        const res = await fetch(`../api/user/delete/${user_id}`, {
           method: 'POST',
         });
         if (!res.ok) {
           const error_info = await res.json();
-          alert(error_info.error.message);
+          show_pop_alert(`User Deletion`, error_info.error.message, 'bi-x-lg');
+          return;
         }
+        show_pop_alert(`User Deletion`, `User ${user_id} deleted`);
         loadUsersPage();
       } catch (e) {
         if (e instanceof Error) {
           console.error(e.message);
-          alert(e.message);
+          show_pop_alert('Internal Error', e.message, 'bi-x-lg');
         }
       }
     });
   } catch (e) {
     if (e instanceof Error) {
       console.error(e.message);
-      alert(e.message);
+      show_pop_alert('Internal Error', e.message, 'bi-x-lg');
     }
   }
 }
@@ -649,7 +714,7 @@ async function show_user_info_modal(user_id, reset_tab = true) {
     const res = await fetch(`../api/user/list/${user_id}`);
     if (!res.ok) {
       const error_info = await res.json();
-      alert(error_info.error.message);
+      show_pop_alert(`Fetching User Info for ${user_id}`, error_info.error.message, 'bi-x-lg');
       return;
     }
     const user = await res.json();
@@ -657,14 +722,12 @@ async function show_user_info_modal(user_id, reset_tab = true) {
     $('#newUserModal').data('selected_user_info', user);
     // Populate the form fields with the current user's information
     $('newUserModal input').val();
-    $('#userID').val(user.id);
-    $('#userID').closest('div').prop('hidden', false);
-    $('#username').val(user.username);
-    $('#fullname').val(user.fullname);
-    $('#email').val(user.linked_email);
-    $('#email').prop('disabled', true);
-    $('#status').val(user.status);
-    $('#role').val(user.role[0]);
+    $('#user-info input[name="user_id"]').val(user.id).closest('div').prop('hidden', false);
+    $('#user-info input[name="username"]').val(user.username);
+    $('#user-info input[name="fullname"]').val(user.fullname);
+    $('#user-info input[name="email"]').val(user.linked_email).prop('disabled', true);
+    $('#user-info input[name="status"]').val(user.status);
+    $('#user-info input[name="role"]').val(user.role[0]);
 
     // Populate the user groups table
     $('#userGroupsTable').empty();
@@ -693,14 +756,13 @@ async function show_user_info_modal(user_id, reset_tab = true) {
     if (!group_list) {
       const res = await fetch('../api/group/list');
       if (res.ok) {
-        user_list = await res.json();
+        group_list = await res.json();
       }
     }
 
     $('#groupInput')
       .autocomplete({
         source: group_list?.map((v) => v.id) ?? [],
-        maxShowItems: 5,
         appendTo: '#newUserTabContent',
         minLength: 0,
       })
@@ -712,7 +774,7 @@ async function show_user_info_modal(user_id, reset_tab = true) {
   } catch (e) {
     if (e instanceof Error) {
       console.error(e.message);
-      alert(e.message);
+      show_pop_alert(`Internal Error`, e.message, 'bi-x-lg');
     }
   }
 }
@@ -722,7 +784,7 @@ async function populateGroupTable() {
     const res = await fetch('../api/group/list');
     if (!res.ok) {
       const error_info = await res.json();
-      alert(error_info.error.message);
+      show_pop_alert('Fetching Group List', error_info.error.message, 'bi-x-lg');
       return;
     }
     group_list = await res.json();
@@ -746,26 +808,29 @@ async function populateGroupTable() {
     });
 
     $('#group-table td .delete-button').on('click', async function () {
+      const group_id = $(this).closest('tr').data('id');
       try {
-        const res = await fetch(`../api/group/delete/${$(this).closest('tr').data('id')}`, {
+        const res = await fetch(`../api/group/delete/${group_id}`, {
           method: 'POST',
         });
         if (!res.ok) {
           const error_info = await res.json();
-          alert(error_info.error.message);
+          show_pop_alert('Group Deletion', error_info.error.message, 'bi-x-lg');
+          return;
         }
+        show_pop_alert(`Group Deletion`, `Group ${group_id} deleted`);
         loadGroupsPage();
       } catch (e) {
         if (e instanceof Error) {
           console.error(e.message);
-          alert(e.message);
+          show_pop_alert('Internal Error', e.message, 'bi-x-lg');
         }
       }
     });
   } catch (e) {
     if (e instanceof Error) {
       console.error(e.message);
-      alert(e.message);
+      show_pop_alert('Internal Error', e.message, 'bi-x-lg');
     }
   }
 }
@@ -777,14 +842,14 @@ async function show_group_info_modal(group_id, reset_tab = true) {
     const res1 = await fetch(`../api/group/list/${group_id}`);
     if (!res1.ok) {
       const error_info = await res1.json();
-      alert(error_info.error.message);
+      show_pop_alert(`Fetching Group Info for ${group_id}`, error_info.error.message, 'bi-x-lg');
       return;
     }
     // Retrieve group memeber list
     const res2 = await fetch(`../api/group/list_members/${group_id}`);
     if (!res2.ok) {
       const error_info = await res2.json();
-      alert(error_info.error.message);
+      show_pop_alert(`Fetching Group Info for ${group_id}`, error_info.error.message, 'bi-x-lg');
       return;
     }
     const group_info = await res1.json();
@@ -792,10 +857,9 @@ async function show_group_info_modal(group_id, reset_tab = true) {
     // Cache selected group
     $('#newGroupModal').data('selected_group_info', { ...group_info, members: group_memeber_list });
     // Populate the form fields with the current group's information
-    $('#groupId').val(group_info.id);
-    $('#groupId').prop('disabled', true);
-    $('#groupName').val(group_info.name);
-    $('#groupType').val(group_info.type);
+    $('#group-info [name="group_id"]').val(group_info.id).prop('disabled', true);
+    $('#group-info [name="group_name"]').val(group_info.name);
+    $('#group-info [name="group_type"]').val(group_info.type);
     // Show extra field for course type
     update_group_info_model_opts(group_info.type);
     if (group_info.type == 'course') {
@@ -836,7 +900,6 @@ async function show_group_info_modal(group_id, reset_tab = true) {
     $('#userInput')
       .autocomplete({
         source: user_list?.map((v) => v.id) ?? [],
-        maxShowItems: 5,
         appendTo: '#newGroupTabContent',
         minLength: 0,
       })
@@ -848,17 +911,17 @@ async function show_group_info_modal(group_id, reset_tab = true) {
   } catch (e) {
     if (e instanceof Error) {
       console.error(e.message);
-      alert(e.message);
+      show_pop_alert('Internal Error', e.message, 'bi-x-lg');
     }
   }
 }
 
 function update_group_info_model_opts(course_type) {
-  $('#newGroupModal .group-extra-opts').prop('hidden', true);
-  $('#newGroupModal .group-extra-opts > input').prop('disabled', true);
+  $('#group-info .group-extra-opts').prop('hidden', true);
+  $('#group-info .group-extra-opts :input').prop('disabled', true);
   if (course_type === 'course') {
-    $('#newGroupModal .course-type-extra-opts').prop('hidden', false);
-    $('#newGroupModal .course-type-extra-opts > input').prop('disabled', false);
+    $('#group-info .course-type-extra-opts').prop('hidden', false);
+    $('#group-info .course-type-extra-opts :input').prop('disabled', false);
   }
 }
 
