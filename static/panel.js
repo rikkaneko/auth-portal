@@ -317,7 +317,7 @@ $(async function () {
     const courseDescription = $('#courseDescription').val();
     const courseCode = $('#courseCode').val();
     const courseYear = $('#courseYear').val();
-    const active = $('#active').val();
+    const active = $('#active').is(':checked');
     const course_meta = {
       course_description: courseDescription,
       course_code: courseCode,
