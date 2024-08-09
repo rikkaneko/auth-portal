@@ -885,7 +885,7 @@ async function show_group_info_modal(group_id, reset_tab = true) {
       $(".multi-select input[type='checkbox']").each(function () {
         const $checkbox = $(this);
         const semesterValue = parseInt($checkbox.val());
-        $checkbox.prop('checked', group_info.meta?.course_semester.includes(semesterValue));
+        $checkbox.prop('checked', group_info.meta?.course_semester?.includes(semesterValue));
       });
       $('#group-info [name="course_is_active"]').val(group_info.meta?.active || false);
     }
