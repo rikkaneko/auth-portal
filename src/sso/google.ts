@@ -15,8 +15,9 @@ const route = Router();
 
 route.get('/', pre_login_handle, (req, res) => {
   // Generate a secure random state value.
-  const state = crypto.randomBytes(32).toString('hex');
-  req.session.state = state;
+  req.session.pkce = {
+    challenge: crypto.randomBytes(32).toString('hex'),
+  };
 
   const auth_url = oauth.generateAuthUrl({
     access_type: 'online',
@@ -25,7 +26,7 @@ route.get('/', pre_login_handle, (req, res) => {
     // Enable incremental authorization. Recommended as a best practice.
     // include_granted_scopes: true,
     // Include the state parameter to reduce the risk of CSRF attacks.
-    state,
+    state: req.session.pkce.challenge,
   });
 
   res.redirect(auth_url);
@@ -39,7 +40,7 @@ route.get('/callback', async (req, res) => {
       status: 'failed',
       message: q.error,
     });
-  } else if (q.state && q.state !== req.session?.state) {
+  } else if (q.state && q.state !== req.session?.pkce?.challenge) {
     console.log('State mismatch. Possible CSRF attack');
     res.status(403).json({
       error: {

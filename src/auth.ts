@@ -151,7 +151,7 @@ route.get('/token', async (req, res) => {
 // Retrieve access token with refresh token
 route.post('/token', async (req, res) => {
   try {
-    const token = get_token(req, 'refresh_token');
+    const token = get_token(req, 'id_refresh_token');
     const user = await User.findOne(
       { 'refresh_tokens.token': token },
       {
@@ -190,12 +190,6 @@ route.post('/token', async (req, res) => {
       return;
     }
     const signed_token = sign_token(user);
-    res.cookie('id_token', signed_token, {
-      httpOnly: true,
-      // sameSite: 'none',
-      domain: config.APP_DOMAIN,
-      maxAge: 14400000,
-    });
     res.json({
       auth_token: signed_token,
     });
