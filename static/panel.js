@@ -264,11 +264,17 @@ $(async function () {
     // Get the group information from the form
     const groupId = $('#groupId').val();
     const groupName = $('#groupName').val();
-    const groupType = $('#groupType').val() || undefined;
+    const groupType = $('#groupType').val() || 'default';
     // Extra: Course
+    const courseDescription = $('#courseDescription').val();
+    const courseCode = $('#courseCode').val();
     const courseYear = $('#courseYear').val();
+    const active = $('#active').val();
     const course_meta = {
+      course_description: courseDescription,
+      course_code: courseCode,
       course_year: courseYear,
+      active,
     };
     let meta = undefined;
 
@@ -319,6 +325,7 @@ $(async function () {
           },
           body: JSON.stringify({
             name: groupName,
+            type: groupType,
             meta,
           }),
         });
@@ -799,7 +806,10 @@ async function show_group_info_modal(group_id, reset_tab = true) {
     // Show extra field for course type
     update_group_info_model_opts(group_info.type);
     if (group_info.type == 'course') {
+      $('#courseDescription').val(group_info.meta?.course_description || '');
+      $('#courseCode').val(group_info.meta?.course_code || '');
       $('#courseYear').val(group_info.meta?.course_year || '');
+      $('#active').val(group_info.meta?.active || false);
     }
 
     // Populate the group members table
@@ -854,11 +864,13 @@ async function show_group_info_modal(group_id, reset_tab = true) {
 }
 
 function update_group_info_model_opts(course_type) {
-  $('#newGroupModal .group-extra-opts').prop('hidden', true);
-  $('#newGroupModal .group-extra-opts > input').prop('disabled', true);
+  const group = $('#newGroupModal .group-extra-opts');
+  group.prop('hidden', true);
+  group.find('input').prop('disabled', true);
   if (course_type === 'course') {
-    $('#newGroupModal .course-type-extra-opts').prop('hidden', false);
-    $('#newGroupModal .course-type-extra-opts > input').prop('disabled', false);
+    const course = $('#newGroupModal .course-type-extra-opts');
+    course.prop('hidden', false);
+    course.find('input').prop('disabled', false);
   }
 }
 
