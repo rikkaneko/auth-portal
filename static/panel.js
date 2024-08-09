@@ -116,11 +116,11 @@ $(async function () {
   // Create User button click event handler
   $('#createUser').on('click', async function () {
     // Get the user information from the form
-    const username = $('#user-info input[name="user_id"]').val() || undefined;
-    const fullname = $('#user-info input[name="fullname"]').val() || '';
-    const email = $('#user-info input[name="email"]').val();
-    const status = $('#user-info input[name="status"]').val();
-    const role = $('#user-info select[name="role"]').val();
+    const username = $('#user-info [name="user_id"]').val() || undefined;
+    const fullname = $('#user-info [name="fullname"]').val() || '';
+    const email = $('#user-info [name="email"]').val();
+    const status = $('#user-info [name="status"]').val();
+    const role = $('#user-info [name="role"]').val();
     // User ID will be available after user creation or retrieve from context
     let user_info = $('#newUserModal').data('selected_user_info') ?? {};
 
@@ -560,8 +560,8 @@ function loadUsersPage() {
     $('#createUser').data('mode', 'new');
     $('#newUserTabContent form')[0].reset();
     $('#userGroupsTable').empty();
-    $('#user-info input[name="user_id"]').closest('div').prop('hidden', true);
-    $('#user-info input[name="email"]').prop('disabled', false);
+    $('#user-info [name="user_id"]').closest('div').prop('hidden', true);
+    $('#user-info [name="email"]').prop('disabled', false);
     $('#newUserModal').data('selected_user_info', null);
     bootstrap.Tab.getInstance($('#newUserTab li:first-child button')).show();
 
@@ -730,12 +730,12 @@ async function show_user_info_modal(user_id, reset_tab = true) {
     $('#newUserModal').data('selected_user_info', user);
     // Populate the form fields with the current user's information
     $('newUserModal input').val();
-    $('#user-info input[name="user_id"]').val(user.id).closest('div').prop('hidden', false);
-    $('#user-info input[name="username"]').val(user.username);
-    $('#user-info input[name="fullname"]').val(user.fullname);
-    $('#user-info input[name="email"]').val(user.linked_email).prop('disabled', true);
-    $('#user-info input[name="status"]').val(user.status);
-    $('#user-info input[name="role"]').val(user.role[0]);
+    $('#user-info [name="user_id"]').val(user.id).closest('div').prop('hidden', false);
+    $('#user-info [name="username"]').val(user.username);
+    $('#user-info [name="fullname"]').val(user.fullname);
+    $('#user-info [name="email"]').val(user.linked_email).prop('disabled', true);
+    $('#user-info [name="status"]').val(user.status);
+    $('#user-info [name="role"]').val(user.role[0]);
 
     // Populate the user groups table
     $('#userGroupsTable').empty();

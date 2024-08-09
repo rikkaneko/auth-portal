@@ -73,6 +73,7 @@ route.get('/token', async (req, res) => {
           message: 'This account cannot be used to login',
         },
       });
+      return;
     }
     const signed_token = sign_token(user);
     const auth_response: AuthResponse = {
