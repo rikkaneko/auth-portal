@@ -30,11 +30,18 @@ export interface IUser {
   refresh_tokens: IUser$TokenInfo[];
 }
 
+interface IGroupMeta {
+  course_description?: string;
+  course_code: string;
+  course_year: string;
+  active: boolean;
+}
+
 export interface IGroup {
   id: string;
   name: string;
   type: 'course' | 'default';
-  meta: Record<string, string | number>;
+  meta: Record<string, string | number | boolean>; // TODO: use IGroupMeta
   created_by?: string;
   updated_by?: string;
   organization: string;
@@ -142,7 +149,8 @@ const GroupSchema = new Schema<IGroup>(
     },
     type: {
       type: String,
-      enum: ['course'],
+      enum: ['default', 'course'],
+      default: 'default',
     },
     meta: Schema.Types.Mixed,
     created_by: String,

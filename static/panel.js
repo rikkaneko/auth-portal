@@ -313,14 +313,23 @@ $(async function () {
     const groupId = $('#group-info [name="group_id"]').val();
     const groupName = $('#group-info [name="group_name"]').val();
     const groupType = $('#group-info [name="group_type"]').val() || undefined;
+    // Extra: Course
+    const courseDescription = $('#courseDescription').val();
+    const courseCode = $('#courseCode').val();
+    const courseYear = $('#courseYear').val();
+    const active = $('#active').val();
+    const course_meta = {
+      course_description: courseDescription,
+      course_code: courseCode,
+      course_year: courseYear,
+      active,
+    };
     let meta = undefined;
 
     if (groupType == 'course') {
       // Extra: Course
       const courseYear = $('div.course-type-extra-opts [name="course_year"]').val();
-      meta = {
-        course_year: courseYear,
-      };
+      meta = course_meta;
     }
 
     // Get the group info
@@ -368,6 +377,7 @@ $(async function () {
           },
           body: JSON.stringify({
             name: groupName,
+            type: groupType,
             meta,
           }),
         });
@@ -863,7 +873,10 @@ async function show_group_info_modal(group_id, reset_tab = true) {
     // Show extra field for course type
     update_group_info_model_opts(group_info.type);
     if (group_info.type == 'course') {
+      $('#courseDescription').val(group_info.meta?.course_description || '');
+      $('#courseCode').val(group_info.meta?.course_code || '');
       $('#courseYear').val(group_info.meta?.course_year || '');
+      $('#active').val(group_info.meta?.active || false);
     }
 
     // Populate the group members table
@@ -917,11 +930,13 @@ async function show_group_info_modal(group_id, reset_tab = true) {
 }
 
 function update_group_info_model_opts(course_type) {
-  $('#group-info .group-extra-opts').prop('hidden', true);
-  $('#group-info .group-extra-opts :input').prop('disabled', true);
+  const group = $('#group-info .group-extra-opts');
+  group.prop('hidden', true);
+  group.find('input').prop('disabled', true);
   if (course_type === 'course') {
-    $('#group-info .course-type-extra-opts').prop('hidden', false);
-    $('#group-info .course-type-extra-opts :input').prop('disabled', false);
+    const course = $('#group-info .course-type-extra-opts');
+    course.prop('hidden', false);
+    course.find('input').prop('disabled', false);
   }
 }
 

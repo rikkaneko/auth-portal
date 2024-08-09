@@ -69,7 +69,7 @@ route.post('/create', required_auth(2), json(), async (req, res) => {
 });
 
 route.post('/update/:group_id', required_auth(2), json(), async (req, res) => {
-  const allowed_fields = ['name', 'meta'];
+  const allowed_fields = ['name', 'type', 'meta'];
   const update_fields: IGroup = req.body;
   try {
     // Validate update data fields
@@ -87,7 +87,6 @@ route.post('/update/:group_id', required_auth(2), json(), async (req, res) => {
       { id: req.params.group_id },
       {
         ...update_fields,
-        created_by: req.auth.user!.id,
         updated_by: req.auth.user!.id,
       }
     );
