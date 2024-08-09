@@ -321,11 +321,16 @@ $(async function () {
       const courseDescription = $('#group-info [name="course_description"]').val();
       const courseCode = $('#group-info [name="course_code"]').val();
       const courseYear = $('#group-info [name="course_year"]').val();
+      const courseSemester = $('.multi-select input:checked')
+        .map(() => parseInt($(this).val()))
+        .get();
+
       const active = $('#group-info [name="course_is_active"]').is(':checked');
       meta = {
         course_description: courseDescription,
         course_code: courseCode,
         course_year: courseYear,
+        course_semester: courseSemester,
         active,
       };
     }
@@ -513,6 +518,9 @@ $(async function () {
 
   $('#group-info [name="group_type"]').on('change', function () {
     update_group_info_model_opts($(this).val());
+    if ($(this).val() !== 'course') {
+      meta = undefined;
+    }
   });
 });
 
@@ -874,6 +882,11 @@ async function show_group_info_modal(group_id, reset_tab = true) {
       $('#group-info [name="course_description"]').val(group_info.meta?.course_description || '');
       $('#group-info [name="course_code"]').val(group_info.meta?.course_code || '');
       $('#group-info [name="course_year"]').val(group_info.meta?.course_year || '');
+      $(".multi-select input[type='checkbox']").each(function () {
+        const $checkbox = $(this);
+        const semesterValue = parseInt($checkbox.val());
+        $checkbox.prop('checked', group_info.meta?.course_semester.includes(semesterValue));
+      });
       $('#group-info [name="course_is_active"]').val(group_info.meta?.active || false);
     }
 

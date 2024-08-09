@@ -12,3 +12,40 @@
   color: #bcbcbc;
   opacity: 0.8;
 }
+
+.multi-select {
+  margin-bottom: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.multi-select-1,
+.multi-select-2,
+.multi-select-3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.multi-select input[type='checkbox'] {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 1px solid #000;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.multi-select input[type='checkbox']:checked {
+  background-color: #000;
+}
+
+.multi-select p {
+  margin: 0;
+}
