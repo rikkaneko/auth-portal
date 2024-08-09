@@ -322,7 +322,7 @@ $(async function () {
       const courseCode = $('#group-info [name="course_code"]').val();
       const courseYear = $('#group-info [name="course_year"]').val();
       const courseSemester = $('.multi-select input:checked')
-        .map(() => parseInt($(this).val()))
+        .map((index, element) => parseInt($(element).val()))
         .get();
 
       const active = $('#group-info [name="course_is_active"]').is(':checked');

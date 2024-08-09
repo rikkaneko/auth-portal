@@ -26,6 +26,20 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  width: 100%;
+  flex-direction: row;
+  gap-x: 0.5rem;
+  items-center: center;
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.multi-select-1:hover,
+.multi-select-2:hover,
+.multi-select-3:hover {
+  background-color: #e5e7eb; /* Gray-200 */
 }
 
 .multi-select input[type='checkbox'] {
@@ -43,9 +57,22 @@
 }
 
 .multi-select input[type='checkbox']:checked {
-  background-color: #000;
+  background-color: #0D6EFD;
+  color: white;
 }
 
 .multi-select p {
   margin: 0;
+}
+
+.multi-select-1.selected,
+.multi-select-2.selected,
+.multi-select-3.selected {
+  background-color: #dbeafe; /* Blue-200 */
+}
+
+.multi-select-1.selected:hover,
+.multi-select-2.selected:hover,
+.multi-select-3.selected:hover {
+  background-color: #93c5fd; /* Blue-300 */
 }
