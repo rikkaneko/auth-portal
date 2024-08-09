@@ -86,35 +86,36 @@
                 <form>
                   <div class="mb-2">
                     <label for="groupId" class="form-label">Group ID (*)</label>
-                    <input type="text" class="form-control" id="groupId" name="group_id" placeholder="" required>
+                    <input type="text" class="form-control" name="group_id" placeholder="" required>
                   </div>
                   <div class="mb-2">
                     <label for="groupName" class="form-label">Group Name</label>
-                    <input type="text" class="form-control" id="groupName" name="group_name" placeholder="">
+                    <input type="text" class="form-control" name="group_name" placeholder="">
                   </div>
                   <div class="mb-2">
                     <label for="groupType" class="form-label">Group Type</label>
-                    <select class="form-select" id="groupType" name="group_type">
+                    <select class="form-select" name="group_type">
                       <option value="" selected>-</option>
                       <option value="course">Course</option>
+                      <option value="default">Default</option>
                     </select>
                   </div>
                   <div class="group-extra-opts course-type-extra-opts" hidden>
-                    <div class="mb-2 ">
+                    <div class="mb-2">
                       <label for="courseDescription" class="form-label">Course Description</label>
-                      <input type="text" class="form-control" id="courseDescription" placeholder="Type the description" disabled>
+                      <input type="text" class="form-control" name="course_description" placeholder="" disabled>
                     </div>
-                    <div class="mb-2 ">
+                    <div class="mb-2">
                       <label for="courseCode" class="form-label">Course Code</label>
-                      <input type="text" class="form-control" id="courseCode" placeholder="cccNNNN" disabled>
+                      <input type="text" class="form-control" name="course_code" placeholder="ABC1234" disabled>
                     </div>
                     <div class="mb-2">
                       <label for="courseYear" class="form-label">Year/Semester</label>
-                      <input type="text" class="form-control" id="courseYear" name="course_year" placeholder="2024/2" disabled>
+                      <input type="text" class="form-control" name="course_year" placeholder="2024/2" disabled>
                     </div>
                     <div class="mb-2 form-check">
                       <label for="active" class="form-check-label">Active</label>
-                      <input type="checkbox" class="form-check-input" id="active" disabled>
+                      <input type="checkbox" class="form-check-input" name="course_is_active" disabled>
                     </div>
                   </div>
                 </form>

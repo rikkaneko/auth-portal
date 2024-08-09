@@ -313,23 +313,21 @@ $(async function () {
     const groupId = $('#group-info [name="group_id"]').val();
     const groupName = $('#group-info [name="group_name"]').val();
     const groupType = $('#group-info [name="group_type"]').val() || undefined;
-    // Extra: Course
-    const courseDescription = $('#courseDescription').val();
-    const courseCode = $('#courseCode').val();
-    const courseYear = $('#courseYear').val();
-    const active = $('#active').is(':checked');
-    const course_meta = {
-      course_description: courseDescription,
-      course_code: courseCode,
-      course_year: courseYear,
-      active,
-    };
-    let meta = undefined;
+    // Extra fields
+    let meta = {};
 
+    // Extra: Course
     if (groupType == 'course') {
-      // Extra: Course
-      const courseYear = $('div.course-type-extra-opts [name="course_year"]').val();
-      meta = course_meta;
+      const courseDescription = $('#group-info [name="course_description"]').val();
+      const courseCode = $('#group-info [name="course_code"]').val();
+      const courseYear = $('#group-info [name="course_year"]').val();
+      const active = $('#group-info [name="course_is_active"]').is(':checked');
+      meta = {
+        course_description: courseDescription,
+        course_code: courseCode,
+        course_year: courseYear,
+        active,
+      };
     }
 
     // Get the group info
@@ -873,10 +871,10 @@ async function show_group_info_modal(group_id, reset_tab = true) {
     // Show extra field for course type
     update_group_info_model_opts(group_info.type);
     if (group_info.type == 'course') {
-      $('#courseDescription').val(group_info.meta?.course_description || '');
-      $('#courseCode').val(group_info.meta?.course_code || '');
-      $('#courseYear').val(group_info.meta?.course_year || '');
-      $('#active').val(group_info.meta?.active || false);
+      $('#group-info [name="course_description"]').val(group_info.meta?.course_description || '');
+      $('#group-info [name="course_code"]').val(group_info.meta?.course_code || '');
+      $('#group-info [name="course_year"]').val(group_info.meta?.course_year || '');
+      $('#group-info [name="course_is_active"]').val(group_info.meta?.active || false);
     }
 
     // Populate the group members table
