@@ -10,19 +10,6 @@
     <link rel="stylesheet" href="panel.css"/>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.14.0/jquery-ui.min.js"></script>
-    <style>
-      .sidebar {
-        background-color: #f8f9fa;
-        padding: 20px;
-      }
-      .sidebar a {
-        display: block;
-        margin-bottom: 10px;
-      }
-      .main-content {
-        padding: 20px;
-      }
-    </style>
   </head>
   <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
@@ -40,8 +27,7 @@
               <a class="nav-link" href="#group" id="groups-nav">Groups</a>
             </li>
           </ul>
-        </div>
-        <div class="btn-group" role="group" id="user_label" hidden>
+          <div class="btn-group ms-auto" role="group" id="user_label" hidden>
           <button type="button" class="btn btn-success" id="user_profile_btn"><span id="login_username"></span> [<span id="login_role"></span>]</button>
           <button type="button" class="btn btn-secondary" id="logout_btn"><i class="bi bi-box-arrow-in-right me-1"></i>Logout</button>
         </div>
@@ -54,11 +40,11 @@
 
     <div class="container-fluid">
       <div class="row">
-        <div class="col-3 sidebar">
+        <div class="col-md-1 sidebar">
           <a href="#user" class="nav-link" id="user-sidebar">User</a>
           <a href="#group" class="nav-link" id="group-sidebar">Group</a>
         </div>
-        <div class="col-9 main-content" id="main-content">
+        <div class="col-md-8 main-content flex-fill" id="main-content">
           <!-- Main content will be loaded here -->
         </div>
       </div>
@@ -142,18 +128,21 @@
                 </div>            
                 <hr>
                 <h5>Group Members</h5>
-                <table class="table">
-                  <thead>
-                    <tr>
-                      <th>User</th>
-                      <th>Role</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody id="groupMembersTable">
-                    <!-- Group members will be added here -->
-                  </tbody>
-                </table>
+                <div class="table-responsive">
+                  <table class="table">
+                    <thead>
+                      <tr>
+                        <th>User</th>
+                        <th>Role</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody id="groupMembersTable">
+                      <!-- Group members will be added here -->
+                    </tbody>
+                  </table>
+                </div>
+                
               </div>
             </div>
           </div>
@@ -234,18 +223,21 @@
                 </div>
                 <hr>
                 <h5>User Groups</h5>
-                <table class="table">
-                  <thead>
-                    <tr>
-                      <th>Group</th>
-                      <th>Role</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody id="userGroupsTable">
-                    <!-- User groups will be added here -->
-                  </tbody>
-                </table>
+                <div class="table-responsive">
+                  <table class="table">
+                    <thead>
+                      <tr>
+                        <th>Group</th>
+                        <th>Role</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody id="userGroupsTable">
+                      <!-- User groups will be added here -->
+                    </tbody>
+                  </table>
+                </div>
+                
               </div>
             </div>
           </div>

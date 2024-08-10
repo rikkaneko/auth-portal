@@ -1,3 +1,44 @@
+.sidebar {
+  background-color: #f8f9fa;
+  padding: 20px;    
+}
+
+.sidebar a {
+  display: block;
+  margin-bottom: 10px;
+}
+
+.main-content {
+  padding: 20px;
+}
+
+@media (max-width: 920px) {
+  .sidebar {
+    display: none;
+  }
+  .main-content {
+    padding: 0px;
+  }
+
+  .navbar-brand {
+    font-size: 1.1rem;
+  }
+  .btn-group .btn {
+    font-size: 0.9rem;
+    padding: 0.5rem 0.75rem;
+  }
+  .table th, .table td {
+    padding: 0.5rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (min-width: 920px) {
+  .sidebar {
+    display: block;
+  }
+}
+
 .ui-autocomplete {
   overflow-y: auto;
   /* prevent horizontal scrollbar */
@@ -11,4 +52,19 @@
 ::placeholder {
   color: #bcbcbc;
   opacity: 0.8;
+}
+
+.table-responsive tbody td {
+  white-space: nowrap;
+}
+
+.table-responsive {
+  overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
+}
+
+.table-responsive::-webkit-scrollbar {
+  width: 0px;
+  height: 0px;
+  background: transparent;
 }

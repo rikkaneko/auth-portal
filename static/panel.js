@@ -5,12 +5,17 @@ let logged_user = null;
 let user_list = null;
 let group_list = null;
 
-function show_pop_alert(title, message, icon = 'bi-check-lg') {
+function show_pop_alert(title, message, icon = 'bi-check-lg', confirm_handler, cancel_handler) {
   // Remove oldest toast
   const count = $('.toast-container').children().length;
   if (count > 6) {
     $('.toast-container').children().last().remove();
   }
+
+  const toast_btn = `<div class="mt-2 text-end toast-btn-group">
+      ${confirm_handler ? '<button type="button" class="btn btn-primary btn-sm ms-1">Confirm</button>' : ''}
+      ${cancel_handler ? '<button type="button" class="btn btn-secondary btn-sm ms-1" data-bs-dismiss="Cancel">Close</button>' : ''}
+    </div>`;
 
   const toast = $(
     `<div class="toast show" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="true">
@@ -20,6 +25,7 @@ function show_pop_alert(title, message, icon = 'bi-check-lg') {
         </div>
         <div class="toast-body">
           ${message}
+          ${confirm_handler || cancel_handler ? toast_btn : ''}
         </div>
       </div>`
   );
@@ -28,6 +34,15 @@ function show_pop_alert(title, message, icon = 'bi-check-lg') {
 
   $('.toast .btn-close').on('click', function () {
     $(this).closest('.toast').remove();
+  });
+
+  toast.find('.toast-btn-group .btn-primary').on('click', function () {
+    confirm_handler();
+    toast?.remove();
+  });
+  toast.find('.toast-btn-group .btn-secondary').on('click', function () {
+    cancel_handler();
+    toast?.remove();
   });
 
   // Auto remove current toast
@@ -273,7 +288,7 @@ $(async function () {
               <td>${groupId}</td>
               <td>${role}</td>
               <td class='text-end'>
-                <button class="btn btn-sm btn-danger">Remove</button>
+                <button class="btn btn-sm btn-danger"><i class="bi bi-trash3"></i> Remove </button>
               </td>
             </tr>
           `);
@@ -469,7 +484,7 @@ $(async function () {
               <td>${userId}</td>
               <td>${role}</td>
               <td class='text-end'>
-                <button class="btn btn-sm btn-danger">Remove</button>
+                <button class="btn btn-sm btn-danger"><i class="bi bi-trash3"></i> Remove </button>
               </td>
             </tr>
           `);
@@ -525,19 +540,21 @@ function loadUsersPage() {
           <input type="text" class="form-control" id="user-filter" placeholder="Filter users...">
         </div>
         <button class="btn btn-primary mb-3" id="new_user_btn">New User</button>
-        <table class="table" id="user-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Role</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- User list will be added here -->
-          </tbody>
-        </table>
+        <div class="table-responsive">
+          <table class="table" id="user-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- User list will be added here -->
+            </tbody>
+          </table>
+        </div>
       `);
 
   // Populate the user table
@@ -597,18 +614,20 @@ function loadGroupsPage() {
           <input type="text" class="form-control" id="group-filter" placeholder="Filter groups...">
         </div>
         <button class="btn btn-primary mb-3" id="new_group_btn">New Group</button>
-        <table class="table" id="group-table">
-          <thead>
-            <tr>
-              <th>Group ID</th>
-              <th>Name</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- Group list will be added here -->
-          </tbody>
-        </table>
+        <div class="table-responsive">
+          <table class="table" id="group-table">
+            <thead>
+              <tr>
+                <th>Group ID</th>
+                <th>Name</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Group list will be added here -->
+            </tbody>
+          </table>
+        </div>
       `);
 
   // Populate the group table
@@ -677,8 +696,8 @@ async function populateUserTable() {
         <td>${user.linked_email}</td>
         <td>${user.role}</td>
         <td class="text-end">
-          <button class="btn btn-sm btn-primary edit-button">Edit</button>
-          <button class="btn btn-sm btn-danger delete-button">Delete</button>
+          <button class="btn btn-sm btn-primary edit-button ms-1"><i class="bi bi-pencil-square"></i> Edit </button>
+          <button class="btn btn-sm btn-danger delete-button ms-1"><i class="bi bi-trash3"></i> Delete </button>
         </td>
       </tr>
     `);
@@ -689,24 +708,34 @@ async function populateUserTable() {
     });
 
     $('#user-table td .delete-button').on('click', async function () {
-      try {
-        const user_id = $(this).closest('tr').data('id');
-        const res = await fetch(`../api/user/delete/${user_id}`, {
-          method: 'POST',
-        });
-        if (!res.ok) {
-          const error_info = await res.json();
-          show_pop_alert(`User Deletion`, error_info.error.message, 'bi-x-lg');
-          return;
+      const user_id = $(this).closest('tr').data('id');
+      show_pop_alert(
+        'User Deletion',
+        `Confirm to delete user ${user_id}?`,
+        'bi-question-circle',
+        async () => {
+          try {
+            const res = await fetch(`../api/user/delete/${user_id}`, {
+              method: 'POST',
+            });
+            if (!res.ok) {
+              const error_info = await res.json();
+              show_pop_alert(`User Deletion`, error_info.error.message, 'bi-x-lg');
+              return;
+            }
+            show_pop_alert(`User Deletion`, `User ${user_id} deleted`);
+            loadUsersPage();
+          } catch (e) {
+            if (e instanceof Error) {
+              console.error(e.message);
+              show_pop_alert('Internal Error', e.message, 'bi-x-lg');
+            }
+          }
+        },
+        () => {
+          show_pop_alert(`User Deletion`, `Operation cancelled`);
         }
-        show_pop_alert(`User Deletion`, `User ${user_id} deleted`);
-        loadUsersPage();
-      } catch (e) {
-        if (e instanceof Error) {
-          console.error(e.message);
-          show_pop_alert('Internal Error', e.message, 'bi-x-lg');
-        }
-      }
+      );
     });
   } catch (e) {
     if (e instanceof Error) {
@@ -745,7 +774,7 @@ async function show_user_info_modal(user_id, reset_tab = true) {
           <td>${id}</td>
           <td>${role}</td>
           <td class="text-end">
-            <button class="btn btn-sm btn-danger">Remove</button>
+            <button class="btn btn-sm btn-danger"><i class="bi bi-trash3"></i> Remove </button>
           </td>
         </tr>
       `);
@@ -803,8 +832,8 @@ async function populateGroupTable() {
         <td>${id}</td>
         <td>${name}</td>
         <td class="text-end">
-          <button class="btn btn-sm btn-primary edit-button">Edit</button>
-          <button class="btn btn-sm btn-danger delete-button">Delete</button>
+          <button class="btn btn-sm btn-primary edit-button ms-1"><i class="bi bi-pencil-square"></i> Edit </button>
+          <button class="btn btn-sm btn-danger delete-button ms-1"><i class="bi bi-trash3"></i> Delete </button>
         </td>
       </tr>
     `);
@@ -817,23 +846,33 @@ async function populateGroupTable() {
 
     $('#group-table td .delete-button').on('click', async function () {
       const group_id = $(this).closest('tr').data('id');
-      try {
-        const res = await fetch(`../api/group/delete/${group_id}`, {
-          method: 'POST',
-        });
-        if (!res.ok) {
-          const error_info = await res.json();
-          show_pop_alert('Group Deletion', error_info.error.message, 'bi-x-lg');
-          return;
+      show_pop_alert(
+        'Group Deletion',
+        `Confirm to delete group ${group_id}?`,
+        'bi-question-circle',
+        async () => {
+          try {
+            const res = await fetch(`../api/group/delete/${group_id}`, {
+              method: 'POST',
+            });
+            if (!res.ok) {
+              const error_info = await res.json();
+              show_pop_alert('Group Deletion', error_info.error.message, 'bi-x-lg');
+              return;
+            }
+            show_pop_alert(`Group Deletion`, `Group ${group_id} deleted`);
+            loadGroupsPage();
+          } catch (e) {
+            if (e instanceof Error) {
+              console.error(e.message);
+              show_pop_alert('Internal Error', e.message, 'bi-x-lg');
+            }
+          }
+        },
+        () => {
+          show_pop_alert(`Group Deletion`, `Operation cancelled`);
         }
-        show_pop_alert(`Group Deletion`, `Group ${group_id} deleted`);
-        loadGroupsPage();
-      } catch (e) {
-        if (e instanceof Error) {
-          console.error(e.message);
-          show_pop_alert('Internal Error', e.message, 'bi-x-lg');
-        }
-      }
+      );
     });
   } catch (e) {
     if (e instanceof Error) {
@@ -885,7 +924,7 @@ async function show_group_info_modal(group_id, reset_tab = true) {
               <td>${user_id}</td>
               <td>${role[0]}</td>
               <td class="text-end">
-                <button class="btn btn-sm btn-danger">Remove</button>
+                <button class="btn btn-sm btn-danger"><i class="bi bi-trash3"></i> Remove </button>
               </td>
             </tr>
           `);
