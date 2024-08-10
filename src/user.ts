@@ -236,14 +236,15 @@ route.post('/create', required_auth(2), json(), async (req, res) => {
   const new_user_info: IUser = req.body;
   if (req.auth.privilege_level! < 3) {
     // Require admin role
-    if (new_user_info?.role?.includes('admin') || new_user_info?.role?.includes('teacher'))
+    if (new_user_info?.role?.includes('admin') || new_user_info?.role?.includes('teacher')) {
       res.status(403).json({
         error: {
           code: 403,
           message: 'Permission denied (Assign a new admin role without admin right)',
         },
       });
-    return;
+      return;
+    }
   }
 
   if (!new_user_info?.linked_email) {
