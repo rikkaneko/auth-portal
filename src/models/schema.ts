@@ -34,6 +34,7 @@ interface IGroupMeta {
   course_description?: string;
   course_code: string;
   course_year: string;
+  course_semester: number[];
   active: boolean;
 }
 
@@ -41,7 +42,7 @@ export interface IGroup {
   id: string;
   name: string;
   type: 'course' | 'default';
-  meta: Record<string, string | number | boolean>; // TODO: use IGroupMeta
+  meta: Record<string, string | number | boolean | number[]>; // TODO: use IGroupMeta
   created_by?: string;
   updated_by?: string;
   organization: string;

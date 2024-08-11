@@ -336,11 +336,16 @@ $(async function () {
       const courseDescription = $('#group-info [name="course_description"]').val();
       const courseCode = $('#group-info [name="course_code"]').val();
       const courseYear = $('#group-info [name="course_year"]').val();
+      const courseSemester = $('.multi-select input:checked')
+        .map((index, element) => parseInt($(element).val()))
+        .get();
+
       const active = $('#group-info [name="course_is_active"]').is(':checked');
       meta = {
         course_description: courseDescription,
         course_code: courseCode,
         course_year: courseYear,
+        course_semester: courseSemester,
         active,
       };
     }
@@ -528,6 +533,9 @@ $(async function () {
 
   $('#group-info [name="group_type"]').on('change', function () {
     update_group_info_model_opts($(this).val());
+    if ($(this).val() !== 'course') {
+      meta = undefined;
+    }
   });
 });
 
@@ -913,6 +921,14 @@ async function show_group_info_modal(group_id, reset_tab = true) {
       $('#group-info [name="course_description"]').val(group_info.meta?.course_description || '');
       $('#group-info [name="course_code"]').val(group_info.meta?.course_code || '');
       $('#group-info [name="course_year"]').val(group_info.meta?.course_year || '');
+      group_info.meta?.course_semester.forEach((v) => {
+        $(`#group-info .multi-select input[type='checkbox'][value='${v}']`).prop('checked', true);
+      });
+      // $("#group-info .multi-select input[type='checkbox']").each(function () {
+      //   const $checkbox = $(this);
+      //   const semesterValue = parseInt($checkbox.val());
+      //   $checkbox.prop('checked', group_info.meta?.course_semester?.includes(semesterValue));
+      // });
       $('#group-info [name="course_is_active"]').val(group_info.meta?.active || false);
     }
 
@@ -970,6 +986,8 @@ function update_group_info_model_opts(course_type) {
   const group = $('#group-info .group-extra-opts');
   group.prop('hidden', true);
   group.find('input').prop('disabled', true);
+  group.find('input').not('[type="checkbox"]').val('');
+  group.find('input[type="checkbox"]').prop('checked', false);
   if (course_type === 'course') {
     const course = $('#group-info .course-type-extra-opts');
     course.prop('hidden', false);
