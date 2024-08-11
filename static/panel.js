@@ -12,7 +12,7 @@ function show_pop_alert(title, message, icon = 'bi-check-lg', confirm_handler, c
     $('.toast-container').children().last().remove();
   }
 
-  const toast_btn = `<div class="mt-2 text-end toast-btn-group">
+  const toast_btn = `<div class="mt-3 text-end toast-btn-group">
       ${confirm_handler ? '<button type="button" class="btn btn-primary btn-sm ms-1">Confirm</button>' : ''}
       ${cancel_handler ? '<button type="button" class="btn btn-secondary btn-sm ms-1" data-bs-dismiss="Cancel">Close</button>' : ''}
     </div>`;
@@ -48,7 +48,7 @@ function show_pop_alert(title, message, icon = 'bi-check-lg', confirm_handler, c
   // Auto remove current toast
   setTimeout(() => {
     toast?.remove();
-  }, 10000);
+  }, 5000);
 }
 
 $(async function () {
