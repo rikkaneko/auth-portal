@@ -6,7 +6,7 @@ import {
   AuthorizationCodeRequest,
   AuthorizationUrlRequest,
 } from '@azure/msal-node';
-import { pre_login_handle } from '../util';
+import { pre_login_handle, render_error_page } from '../util';
 
 // Refer to OpenID Connect on the Microsoft identity platform (https://learn.microsoft.com/en-us/entra/identity-platform/v2-protocols-oidc)
 // Use https://learn.microsoft.com/en-us/entra/identity-platform/id-token-claims-reference to verify user identity
@@ -19,6 +19,8 @@ const msal = new ConfidentialClientApplication({
 });
 
 const route = Router();
+
+route.use(render_error_page);
 
 route.get('/', pre_login_handle, async (req, res) => {
   const crypt = new CryptoProvider();

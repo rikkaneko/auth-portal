@@ -3,7 +3,7 @@ import config from '../config';
 import { OAuth2Client$Userinfo } from '../types';
 import { OAuth2Client } from 'google-auth-library';
 import crypto from 'crypto';
-import { pre_login_handle } from '../util';
+import { pre_login_handle, render_error_page } from '../util';
 
 const oauth = new OAuth2Client({
   clientId: config.GOOGLE_AUTH_CLIENT_ID,
@@ -12,6 +12,8 @@ const oauth = new OAuth2Client({
 });
 
 const route = Router();
+
+route.use(render_error_page);
 
 route.get('/', pre_login_handle, (req, res) => {
   // Generate a secure random state value.
@@ -37,8 +39,10 @@ route.get('/callback', async (req, res) => {
   if (q.error) {
     console.log('Error:' + q.error);
     res.status(400).json({
-      status: 'failed',
-      message: q.error,
+      error: {
+        code: 400,
+        message: `Unable to obtain user identity (${q.error})`,
+      },
     });
   } else if (q.state && q.state !== req.session?.pkce?.challenge) {
     console.log('State mismatch. Possible CSRF attack');

@@ -6,7 +6,7 @@ import google from './sso/google';
 import { User } from './models/schema';
 import config from './config';
 import { AuthResponse } from './types';
-import { do_auth, get_token, required_auth, sign_token } from './util';
+import { do_auth, get_token, required_auth, sign_token, render_error_page } from './util';
 import mongoose from 'mongoose';
 
 const route = Router();
@@ -39,7 +39,7 @@ route.get('/token_info', do_auth, required_auth(), (req, res) => {
 
 // Retrieve access token (and refresh token if specified with need_refresh_token=1 in login request) after login
 // Can only call once
-route.get('/token', async (req, res) => {
+route.get('/token', render_error_page, async (req, res) => {
   if (!req.session.user?.logged) {
     res.status(403).json({
       error: {
@@ -60,7 +60,7 @@ route.get('/token', async (req, res) => {
         res.status(403).json({
           error: {
             code: 403,
-            message: 'Logged user is not registed to the system',
+            message: 'This user is not registed to the system',
           },
         });
       }

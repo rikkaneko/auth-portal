@@ -141,3 +141,33 @@ export const sign_token = (user: IUser) => {
     subject: 'login-auth-token',
   });
 };
+
+// Render the error response into a simple error page (frontend only)
+export const render_error_page: RequestHandler = (req, res, next) => {
+  const original_json = res.json;
+  res.json = function (body: Record<string, any>) {
+    const failed_redirect_url = req.session?.failed_redirect_url ?? config.APP_PATH_PREFIX + '/frontend/login';
+    if (body?.error?.code && body.error?.message) {
+      res.send(/* html */ `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <link rel="stylesheet" href="${config.APP_PATH_PREFIX + '/frontend/error.css'}">
+          <title>Error Page</title>
+        </head>
+        <body>
+          <div class="error-container">
+            <div class="error-code">${body.error?.code ?? 400}</div>
+            <div class="error-message">${body.error?.message ?? 'Oops! Some error occurred'}</div>
+            <a href="${failed_redirect_url}" class="btn">&lt; Back to Login Page</a>
+          </div>
+        </body>
+        </html>
+        `);
+    } else original_json.call(this, body);
+    return res;
+  };
+  next();
+};
