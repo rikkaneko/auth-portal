@@ -729,7 +729,7 @@ async function populateUserTable() {
     const userTableBody = $('#user-table tbody');
     user_list.forEach(function (user) {
       userTableBody.append(/* html */ `
-      <tr data-id=${user.id}>
+      <tr data-id="${user.id}">
         <td>${user.username}</td>
         <td>${user.linked_email}</td>
         <td>${user.role}</td>
@@ -808,7 +808,7 @@ async function show_user_info_modal(user_id, reset_tab = true) {
     $('#userGroupsTable').empty();
     user.groups.forEach(function ({ id, role }) {
       $('#userGroupsTable').append(/* html */ `
-        <tr data-id=${id}>
+        <tr data-id="${id}">
           <td>${id}</td>
           <td>${role}</td>
           <td class="text-end">
@@ -866,7 +866,7 @@ async function populateGroupTable() {
     const groupTableBody = $('#group-table tbody');
     group_list.forEach(function ({ id, name }) {
       groupTableBody.append(/* html */ `
-      <tr data-id=${id}>
+      <tr data-id="${id}">
         <td>${id}</td>
         <td>${name}</td>
         <td class="text-end">
@@ -967,7 +967,7 @@ async function show_group_info_modal(group_id, reset_tab = true) {
     $('#groupMembersTable').empty();
     group_memeber_list?.forEach(function ({ user_id, role }) {
       $('#groupMembersTable').append(/* html */ `
-            <tr data-id=${user_id}>
+            <tr data-id="${user_id}">
               <td>${user_id}</td>
               <td>${role[0]}</td>
               <td class="text-end">
