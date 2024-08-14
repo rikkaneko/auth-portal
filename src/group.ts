@@ -195,6 +195,7 @@ route.get('/list_members/:group_id', required_auth(), async (req, res) => {
   try {
     const group_id = req.params.group_id;
     const result = await User.find({ groups: { $elemMatch: { id: group_id } } }, { id: 1, 'groups.$': 1 });
+    console.log(result);
     res.json(
       result.map((user) => {
         return {

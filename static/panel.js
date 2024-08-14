@@ -951,7 +951,8 @@ async function show_group_info_modal(group_id, reset_tab = true) {
       $('#group-info [name="course_description"]').val(group_info.meta?.course_description || '');
       $('#group-info [name="course_code"]').val(group_info.meta?.course_code || '');
       $('#group-info [name="course_year"]').val(group_info.meta?.course_year || '');
-      group_info.meta?.course_semester.forEach((v) => {
+      console.log(group_info.meta?.course_semester);
+      group_info.meta?.course_semester?.forEach((v) => {
         $(`#group-info .multi-select input[type='checkbox'][value='${v}']`).prop('checked', true);
       });
       // $("#group-info .multi-select input[type='checkbox']").each(function () {
@@ -964,7 +965,7 @@ async function show_group_info_modal(group_id, reset_tab = true) {
 
     // Populate the group members table
     $('#groupMembersTable').empty();
-    group_memeber_list.forEach(function ({ user_id, role }) {
+    group_memeber_list?.forEach(function ({ user_id, role }) {
       $('#groupMembersTable').append(/* html */ `
             <tr data-id=${user_id}>
               <td>${user_id}</td>
