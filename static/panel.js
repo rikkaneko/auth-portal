@@ -386,6 +386,36 @@ $(async function () {
         }
         const { id } = await res.json();
         group_info.id = id;
+
+        // Check if user id exists
+        if (!logged_user?.id) {
+          alert('Session expired. Please login again.');
+          window.open(
+            '../frontend/login?' +
+              new URLSearchParams({
+                panel: 1,
+              }),
+            '_self'
+          );
+          return;
+        }
+        const adminJoinGroupRes = await fetch('../api/user/join_group', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            id: group_info.id,
+            role: 'admin',
+            user_id: logged_user.id,
+          }),
+        });
+        if (!adminJoinGroupRes.ok) {
+          const error_info = await adminJoinGroupRes.json();
+          show_pop_alert(`Creator Joining Group ${id}...`, error_info.error.message, 'bi-x-lg');
+          console.error(error_info.error.message);
+        }
+
         show_pop_alert('Group Created', `Group ${id} created`);
       } else if (mode === 'update') {
         const res = await fetch(`../api/group/update/${group_info.id}`, {
