@@ -77,12 +77,11 @@ app.use((req, res) => {
   });
 });
 
-app.use(((err, req, res) => {
-  console.error(err.stack);
+app.use(((err, req, res, next) => {
   res.status(500).json({
     error: {
       code: 500,
-      message: 'Internal error',
+      message: err.message,
     },
   });
   console.error(err);

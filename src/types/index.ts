@@ -37,3 +37,16 @@ export interface AuthResponse {
   refresh_token?: string;
   expiration?: number; // Timestamp (in milliseconds)
 }
+
+export interface ImportGroupInput {
+  default: {
+    user_role: string[];
+    group_role: string[];
+  };
+  members: {
+    linked_email: string;
+    fullname?: string;
+    user_role?: string[];
+    group_role?: string[];
+  }[];
+}

@@ -48,7 +48,7 @@ function show_pop_alert(title, message, icon = 'bi-check-lg', confirm_handler, c
   // Auto remove current toast
   setTimeout(() => {
     toast?.remove();
-  }, 5000);
+  }, 10000);
 }
 
 $(async function () {
@@ -552,19 +552,55 @@ $(async function () {
     row.remove();
   });
 
-  // Import Members button click event handler
-  $('#importMembers').on('click', function () {
-    const csvFile = $('#csvFile')[0].files[0];
-    if (csvFile) {
-      // Handle the CSV file upload and import members
-      console.log('Importing members from CSV:', csvFile.name);
-    }
-  });
-
   $('#group-info [name="group_type"]').on('change', function () {
     update_group_info_model_opts($(this).val());
     if ($(this).val() !== 'course') {
       meta = undefined;
+    }
+  });
+
+  $('#importMembers').on('click', async () => {
+    const group_info = $('#newGroupModal').data('selected_group_info');
+    if (!group_info) {
+      show_pop_alert(`Import Members`, 'Please create the group first', 'bi-x-lg');
+      return;
+    }
+
+    /** @type File | undefined */
+    const upload_file = $('#importMembersInput').prop('files')[0];
+    if (!upload_file) {
+      show_pop_alert('Import Memeber', 'Please upload the file first', 'bi-x-lg');
+      return;
+    }
+    try {
+      const content = await upload_file.arrayBuffer();
+      const res = await fetch(`../api/group/import_members/${group_info.id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: new TextDecoder().decode(content),
+      });
+      if (!res.ok) {
+        const error_info = await res.json();
+        show_pop_alert(`Import Members`, error_info.error.message, 'bi-x-lg');
+      } else {
+        const result = await res.json();
+        let import_log = `Imported ${result.success_count} entries`;
+        import_log += `, failed ${result.failed_count ?? 0}`;
+        import_log += result.failed_entries?.length > 0 ? '<br>====================' : '';
+        result.failed_entries?.forEach((v) => {
+          import_log += `<br>${v.user}: ${v.message}`;
+        });
+        show_pop_alert('Import Members', import_log);
+      }
+      // Reload group modal
+      await show_group_info_modal(group_info.id, false);
+    } catch (e) {
+      if (e instanceof Error) {
+        console.error(e.message);
+        show_pop_alert('Internal Error', e.message, 'bi-x-lg');
+      }
     }
   });
 });
@@ -693,6 +729,7 @@ function loadGroupsPage() {
     update_group_info_model_opts();
     $('#group-info [name="group_type"]').prop('disabled', false);
     bootstrap.Tab.getInstance($('#newGroupTab li:first-child button')).show();
+    $('#importMembersInput').val('');
 
     // Setup authcomplete for user list
     if (!user_list) {
@@ -983,6 +1020,7 @@ async function show_group_info_modal(group_id, reset_tab = true) {
     $('#newGroupModalLabel').text(`Group: ${group_info.id}`);
     $('#createGroup').text('Save');
     $('#createGroup').data('mode', 'update');
+    $('#importMembersInput').val('');
 
     if (reset_tab) bootstrap.Tab.getInstance($('#newGroupTab li:first-child button')).show();
 
