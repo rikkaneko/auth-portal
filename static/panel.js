@@ -366,7 +366,7 @@ $(async function () {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            id: groupId,
+            id: groupId.replace(/ /g, '_'),
             name: groupName,
             type: groupType,
             meta,
@@ -951,7 +951,6 @@ async function show_group_info_modal(group_id, reset_tab = true) {
       $('#group-info [name="course_description"]').val(group_info.meta?.course_description || '');
       $('#group-info [name="course_code"]').val(group_info.meta?.course_code || '');
       $('#group-info [name="course_year"]').val(group_info.meta?.course_year || '');
-      console.log(group_info.meta?.course_semester);
       group_info.meta?.course_semester?.forEach((v) => {
         $(`#group-info .multi-select input[type='checkbox'][value='${v}']`).prop('checked', true);
       });
